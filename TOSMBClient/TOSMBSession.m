@@ -27,6 +27,7 @@
 #import "TOSMBSessionFile.h"
 #import "TONetBIOSNameService.h"
 #import "TOSMBSessionDownloadTask.h"
+#import "TOHost.h"
 
 #import "smb_session.h"
 #import "smb_share.h"
@@ -78,65 +79,89 @@
 - (void)setupDataQueue;
 - (void)setupDownloadQueue;
 
+@property (nonatomic, strong)dispatch_queue_t callBackQueue;
+
 @end
 
 @implementation TOSMBSession
 
 #pragma mark - Class Creation -
-- (instancetype)init
-{
+
+- (instancetype)init{
     if (self = [super init]) {
+        self.callBackQueue = dispatch_queue_create([@"com.smbsession.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
         _session = smb_session_new();
         if (_session == NULL)
             return nil;
     }
-    
     return self;
 }
 
-- (instancetype)initWithHostName:(NSString *)name
-{
+- (instancetype)initWithHostName:(NSString *)name{
     if (self = [self init]) {
-        _hostName = name;
+        _hostName = [name copy];
     }
-    
     return self;
 }
 
-- (instancetype)initWithIPAddress:(NSString *)address
-{
+- (instancetype)initWithIPAddress:(NSString *)address{
     if (self = [self init]) {
-        _ipAddress = address;
+        _ipAddress = [address copy];
     }
-    
     return self;
 }
 
-- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress
-{
+- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress{
     if (self = [self init]) {
-        _hostName = name;
-        _ipAddress = ipAddress;
+        _hostName = [name copy];
+        _ipAddress = [ipAddress copy];
     }
-    
     return self;
 }
 
-- (void)dealloc
-{
+- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress{
+    if (self = [self init]) {
+        if([self isDotQuadIP:hostNameOrIPaddress]){
+            _ipAddress = [hostNameOrIPaddress copy];
+        }
+        else{
+            _hostName = [hostNameOrIPaddress copy];
+        }
+    }
+    return self;
+}
+
+- (BOOL)isDotQuadIP:(NSString *)hostName{
+    NSArray *a = [hostName componentsSeparatedByString:@"."];
+    if([a count]==4){
+        for(NSString *s in a){
+            NSCharacterSet* nonNumbers = [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
+            NSRange r = [s rangeOfCharacterFromSet: nonNumbers];
+            if(r.location != NSNotFound){
+                return NO;
+            }
+        }
+        return YES;
+    }
+    return NO;
+}
+
+- (void)dealloc{
     smb_session_destroy(self.session);
 }
 
 #pragma mark - Authorization -
-- (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password
-{
+
+- (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password domain:(NSString *)domain{
     self.userName = userName;
     self.password = password;
+    self.domain = domain;
 }
 
 #pragma mark - Connections/Authentication -
-- (BOOL)deviceIsOnWiFi
-{
+
+- (BOOL)deviceIsOnWiFi{
+    
     SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, "8.8.8.8");
     SCNetworkReachabilityFlags flags;
     BOOL success = SCNetworkReachabilityGetFlags(reachability, &flags);
@@ -157,8 +182,7 @@
     return YES;
 }
 
-- (NSError *)attemptConnection
-{
+- (NSError *)attemptConnection{
     NSError *error = [self attemptConnectionWithSessionPointer:self.session];
     if (error)
         return error;
@@ -167,8 +191,8 @@
     return nil;
 }
 
-- (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session
-{
+- (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session{
+    
     //There's no point in attempting a potentially costly TCP attempt if we're not even on a local network.
     if ([self deviceIsOnWiFi] == NO) {
         return errorForErrorCode(TOSMBSessionErrorNotOnWiFi);
@@ -195,17 +219,40 @@
     
     //If only one piece of information was supplied, use NetBIOS to resolve the other
     if (self.ipAddress.length == 0 || self.hostName.length == 0) {
-        TONetBIOSNameService *nameService = [[TONetBIOSNameService alloc] init];
         
-        if (self.ipAddress == nil)
+        if(self.ipAddress == nil){
+            NSArray *addresses = [TOHost addressesForHostname:self.hostName];
+            NSString *ipv4Address = nil;
+            for(NSString *address in addresses){
+                if([self isDotQuadIP:address]){
+                    ipv4Address = address;
+                    break;
+                }
+            }
+            self.ipAddress = ipv4Address;
+        }
+        
+        if(self.hostName==nil){
+            self.hostName = [TOHost hostnameForAddress:self.ipAddress];
+        }
+        
+        TONetBIOSNameService *nameService = [[TONetBIOSNameService alloc] init];
+        if (self.ipAddress == nil){
             self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
-        else
+        }
+        if(self.hostName==nil){
             self.hostName = [nameService lookupNetworkNameForIPAddress:self.ipAddress];
+        }
+        
     }
     
     //If there is STILL no IP address after the resolution, there's no chance of a successful connection
     if (self.ipAddress == nil) {
         return errorForErrorCode(TOSMBSessionErrorCodeUnableToResolveAddress);
+    }
+    
+    if(self.hostName==nil){
+        self.hostName = @"";
     }
     
     //Convert the IP Address and hostname values to their C equivalents
@@ -220,11 +267,13 @@
     
     //If the username or password wasn't supplied, a non-NULL string must still be supplied
     //to avoid NULL input assertions.   
-    const char *userName = (self.userName ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : " ");
-    const char *password = (self.password ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : " ");
+    const char *userName = (self.userName ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "guest");
+    const char *password = (self.password ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
+    const char *domain = (self.domain ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [self.hostName cStringUsingEncoding:NSUTF8StringEncoding]);
+    
     
     //Attempt a login. Even if we're downgraded to guest, the login call will succeed
-    smb_session_set_creds(session, hostName, userName, password);
+    smb_session_set_creds(session, domain, userName, password);
     if (!smb_session_login(session)) {
         return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
     }
@@ -232,9 +281,10 @@
     return nil;
 }
 
-#pragma mark - Data Requests -
-- (NSArray *)requestContentsOfDirectoryAtFilePath:(NSString *)path error:(NSError **)error
-{
+#pragma mark - Directory Content -
+
+- (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error{
+    
     //Attempt a connection attempt (If it has not already been done)
     NSError *resultError = [self attemptConnection];
     if (error && resultError)
@@ -299,8 +349,9 @@
     //replace any additional forward slashes with backslashes
     relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
     //append double backslash if we don't have one
-    if (![[relativePath substringFromIndex:relativePath.length-1] isEqualToString:@"\\"])
+    if (![[relativePath substringFromIndex:relativePath.length-1] isEqualToString:@"\\"]){
         relativePath = [relativePath stringByAppendingString:@"\\"];
+    }
     
     //Add the wildcard symbol for everything in this folder
     relativePath = [relativePath stringByAppendingString:@"*"]; //wildcard to search for all files
@@ -332,8 +383,8 @@
     return [fileList sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]]];
 }
 
-- (void)requestContentsOfDirectoryAtFilePath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler
-{
+- (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler{
+    
     //setup operation queue as needed
     [self setupDataQueue];
     
@@ -346,30 +397,29 @@
         if (weakOperation.cancelled) { return; }
         
         NSError *error = nil;
-        NSArray *files = [weakSelf requestContentsOfDirectoryAtFilePath:path error:&error];
+        NSArray *files = [weakSelf contentsOfDirectoryAtPath:path error:&error];
         
         if (weakOperation.cancelled) { return; }
         
         if (error) {
             if (errorHandler) {
-                [[NSOperationQueue mainQueue] addOperationWithBlock:^{ errorHandler(error); }];
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
         }
         else {
             if (successHandler) {
-                [[NSOperationQueue mainQueue] addOperationWithBlock:^{ successHandler(files); }];
+                [weakSelf performCallBackWithBlock:^{ successHandler(files); }];
             }
         }
     };
     [operation addExecutionBlock:operationBlock];
     [self.dataQueue addOperation:operation];
+    return operation;
 }
 
 #pragma mark - Download Tasks -
-- (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate
-{
+- (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
     [self setupDownloadQueue];
-    
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath delegate:delegate];
     self.downloadTasks = [self.downloadTasks ? : @[] arrayByAddingObjectsFromArray:@[task]];
     return task;
@@ -379,31 +429,173 @@
                                         destinationPath:(NSString *)destinationPath
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
-                                            failHandler:(void (^)(NSError *error))failHandler
-{
+                                            failHandler:(void (^)(NSError *error))failHandler{
     [self setupDownloadQueue];
-    
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath progressHandler:progressHandler successHandler:completionHandler failHandler:failHandler];
     self.downloadTasks = [self.downloadTasks ? : @[] arrayByAddingObjectsFromArray:@[task]];
     return task;
 }
 
-#pragma mark - Concurrency Management -
-- (void)setupDataQueue
-{
-    if (self.dataQueue)
-        return;
+#pragma mark - Open Connection -
+
+- (NSOperation *)requestOpenConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
+    //setup operation queue as needed
+    [self setupDataQueue];
     
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    
+    __weak typeof(self) weakSelf = self;
+    __weak NSBlockOperation *weakOperation = operation;
+    
+    id operationBlock = ^{
+        if (weakOperation.cancelled) { return; }
+        
+        NSError *error = [weakSelf attemptConnection];
+        
+        if (weakOperation.cancelled) { return; }
+        
+        if (error) {
+            if (errorHandler) {
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
+            }
+        }
+        else {
+            if (successHandler) {
+                [weakSelf performCallBackWithBlock:^{ successHandler(); }];
+            }
+        }
+    };
+    [operation addExecutionBlock:operationBlock];
+    [self.dataQueue addOperation:operation];
+    return operation;
+}
+
+#pragma mark - Item Info -
+
+- (TOSMBSessionFile *)requestItemAtPath:(NSString *)path error:(NSError **)error{
+    
+    //Attempt a connection attempt (If it has not already been done)
+    NSError *resultError = [self attemptConnection];
+    if (error && resultError)
+        *error = resultError;
+    
+    if (resultError){
+        return nil;
+    }
+    
+    if (path.length == 0 || [path isEqualToString:@"/"]) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
+            *error = resultError;
+        }
+        return nil;
+    }
+    
+    //Replace any backslashes with forward slashes
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    //Work out just the share name from the path (The first directory in the string)
+    NSString *shareName = [self shareNameFromPath:path];
+    
+    //Connect to that share
+    //If not, make a new connection
+    const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
+    smb_tid shareID = smb_tree_connect(self.session, cStringName);
+    if (shareID < 0) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
+            *error = resultError;
+        }
+        return nil;
+    }
+    
+    //work out the remainder of the file path and create the search query
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    //prepend double backslashes
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    //replace any additional forward slashes with backslashes
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
+    
+    smb_stat stat = smb_fstat(self.session, shareID, relativePath.UTF8String);
+    
+    if(stat==NULL){
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
+            *error = resultError;
+        }
+        return nil;
+    }
+    
+    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat session:self parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
+    
+    smb_stat_destroy(stat);
+    smb_tree_disconnect(self.session, shareID);
+    
+    return file;
+}
+
+- (NSOperation *)requestItemAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler{
+    
+    //setup operation queue as needed
+    [self setupDataQueue];
+    
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    
+    __weak typeof(self) weakSelf = self;
+    __weak NSBlockOperation *weakOperation = operation;
+    
+    id operationBlock = ^{
+        if (weakOperation.cancelled) { return; }
+        
+        NSError *error = nil;
+        TOSMBSessionFile *file = [weakSelf requestItemAtPath:path error:&error];
+        
+        if (weakOperation.cancelled) { return; }
+        
+        if (error) {
+            if (errorHandler) {
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
+            }
+        }
+        else {
+            if (successHandler) {
+                [weakSelf performCallBackWithBlock:^{ successHandler(file); }];
+            }
+        }
+    };
+    [operation addExecutionBlock:operationBlock];
+    [self.dataQueue addOperation:operation];
+    return operation;
+}
+
+
+#pragma mark - Concurrency Management -
+
+- (void)setupDataQueue{
+    if (self.dataQueue){
+        return;
+    }
     self.dataQueue = [[NSOperationQueue alloc] init];
     self.dataQueue.maxConcurrentOperationCount = 1;
 }
 
-- (void)setupDownloadQueue
-{
-    if (self.downloadsQueue)
+- (void)setupDownloadQueue{
+    if (self.downloadsQueue){
         return;
-    
+    }
     self.downloadsQueue = [[NSOperationQueue alloc] init];
+}
+
+- (void)performCallBackWithBlock:(void(^)(void))block{
+    __weak typeof (self) weakSelf = self;
+    NSParameterAssert(self.callBackQueue);
+    dispatch_async(self.callBackQueue, ^{
+        @synchronized(weakSelf){
+            if(block){
+                block();
+            }
+        }
+    });
 }
 
 #pragma mark - String Parsing -
@@ -465,6 +657,10 @@
         return TOSMBSessionStateError;
     
     return smb_session_state(self.session);
+}
+
+- (BOOL)isConnected{
+    return self.state==TOSMBSessionStateSessionOK;
 }
 
 @end

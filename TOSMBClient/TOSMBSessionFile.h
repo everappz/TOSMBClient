@@ -27,12 +27,12 @@
 
 @interface TOSMBSessionFile : NSObject
 
-@property (nonatomic, readonly) TOSMBSession *session;      /** The SMB session of this file entry. */
-@property (nonatomic, readonly) NSString *filePath;         /** The filepath of this file, excluding the share name. */
+@property (nonatomic, readonly, strong) TOSMBSession *session;      /** The SMB session of this file entry. */
+@property (nonatomic, readonly, copy) NSString *filePath;         /** The filepath of this file, excluding the share name. */
 
 @property (nonatomic, readonly) BOOL directory;             /** Whether this file is a directory or not */
 
-@property (nonatomic, readonly) NSString *name;             /** The name of the file */
+@property (nonatomic, readonly, copy) NSString *name;             /** The name of the file */
 @property (nonatomic, readonly) uint64_t fileSize;         /** The file size, in bytes of this folder (0 if it's a folder) */
 @property (nonatomic, readonly) uint64_t allocationSize;   /** The allocation size (ie how big it will be on disk) of this file */
 @property (nonatomic, readonly) NSDate *creationTime;       /** The date and time that this file was created */
@@ -56,5 +56,7 @@
  * @param session The session in which this item belongs to
  */
 - (instancetype)initWithShareName:(NSString *)name session:(TOSMBSession *)session;
+
+- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat session:(TOSMBSession *)session parentDirectoryFilePath:(NSString *)path;
 
 @end

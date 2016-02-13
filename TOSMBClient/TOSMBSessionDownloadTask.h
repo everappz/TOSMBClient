@@ -49,7 +49,7 @@
  @param totalBytesTowWrite The expected number of bytes encompassing this entire file
  */
 - (void)downloadTask:(TOSMBSessionDownloadTask *)downloadTask
-       didWriteBytes:(uint64_t)bytesWritten
+       didWriteBytes:(NSData *)bytesWritten
    totalBytesReceived:(uint64_t)totalBytesReceived
 totalBytesExpectedToReceive:(int64_t)totalBytesToReceive;
 
@@ -76,14 +76,16 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 
 @interface TOSMBSessionDownloadTask : NSObject
 
+@property (nonatomic, weak) id<TOSMBSessionDownloadTaskDelegate> delegate;
+
 /** The parent session that is managing this download task. (Retained by this class) */
 @property (readonly, weak) TOSMBSession *session;
 
 /** The file path to the target file on the SMB network device. */
-@property (readonly) NSString *sourceFilePath;
+@property (readonly,copy) NSString *sourceFilePath;
 
 /** The target file path that the file will be downloaded to. */
-@property (readonly) NSString *destinationFilePath;
+@property (readonly,copy) NSString *destinationFilePath;
 
 /** The number of bytes presently downloaded by this task */
 @property (readonly) int64_t countOfBytesReceived;
@@ -93,6 +95,8 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 
 /** Returns if download data from a suspended task exists */
 @property (readonly) BOOL canBeResumed;
+
+@property (nonatomic,assign)unsigned long long seekOffset;
 
 /** The state of the download task. */
 @property (readonly) TOSMBSessionDownloadTaskState state;

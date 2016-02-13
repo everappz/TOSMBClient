@@ -25,29 +25,29 @@
 
 @interface TOSMBSessionFile ()
 
-@property (nonatomic, strong, readwrite) NSString *filePath;
+@property (nonatomic, copy) NSString *filePath;
 
 @property (nonatomic, assign) smb_stat stat;
 @property (nonatomic, assign) BOOL isShareRoot; /** If this item represents the root network share */
 
-@property (nonatomic, readwrite) TOSMBSession *session;
+@property (nonatomic, strong) TOSMBSession *session;
 
-@property (nonatomic, strong, readwrite) NSString *name;
-@property (nonatomic, assign, readwrite) uint64_t fileSize;
-@property (nonatomic, assign, readwrite) uint64_t allocationSize;
-@property (nonatomic, assign, readwrite) BOOL directory;
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, assign) uint64_t fileSize;
+@property (nonatomic, assign) uint64_t allocationSize;
+@property (nonatomic, assign) BOOL directory;
 
 @property (nonatomic, assign) uint64_t modificationTimestamp;
-@property (nonatomic, strong, readwrite) NSDate *modificationTime;
+@property (nonatomic, strong) NSDate *modificationTime;
 
 @property (nonatomic, assign) uint64_t creationTimestamp;
-@property (nonatomic, strong, readwrite) NSDate *creationTime;
+@property (nonatomic, strong) NSDate *creationTime;
 
 @property (nonatomic, assign) uint64_t accessTimestamp;
-@property (nonatomic, strong, readwrite) NSDate *accessTime;
+@property (nonatomic, strong) NSDate *accessTime;
 
 @property (nonatomic, assign) uint64_t writeTimestamp;
-@property (nonatomic, strong, readwrite) NSDate *writeTime;
+@property (nonatomic, strong) NSDate *writeTime;
 
 - (NSDate *)dateFromLDAPTimeStamp:(uint64_t)timestamp;
 
@@ -72,9 +72,8 @@
     
     if (self = [self init]) {
         _stat = stat;
-        
         const char *name = smb_stat_name(stat);
-        _name = [[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding];
+        _name = [[[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding] copy];
         _fileSize = smb_stat_get(stat, SMB_STAT_SIZE);
         _allocationSize = smb_stat_get(stat, SMB_STAT_ALLOC_SIZE);
         _directory = (smb_stat_get(self.stat, SMB_STAT_ISDIR) != 0);
@@ -86,9 +85,19 @@
         _modificationTime = [self dateFromLDAPTimeStamp:_modificationTimestamp];
         _creationTime = [self dateFromLDAPTimeStamp:_creationTimestamp];
         
-        _filePath = [path stringByAppendingPathComponent:_name];
+        _filePath = [[path stringByAppendingPathComponent:_name] copy];
     }
     
+    return self;
+}
+
+- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat session:(TOSMBSession *)session parentDirectoryFilePath:(NSString *)path{
+    if (stat == NULL)
+        return nil;
+    if (self = [self initWithStat:stat session:session parentDirectoryFilePath:path]) {
+        _name = [name copy];
+        _filePath = [[path stringByAppendingPathComponent:_name] copy];
+    }
     return self;
 }
 
@@ -98,13 +107,12 @@
         return nil;
     
     if (self = [self init]) {
-        _name = name;
+        _name = [name copy];
         _isShareRoot = YES;
         _fileSize = 0;
         _allocationSize = 0;
         _directory = YES;
-        _filePath = [NSString stringWithFormat:@"//%@/", name];
-        
+        _filePath = [[NSString stringWithFormat:@"//%@/", name] copy];
         _session = session;
     }
     
@@ -120,7 +128,7 @@
     [base setYear:1601];
     [base setEra:1]; // AD
     
-    NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSGregorianCalendar];
+    NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
     NSDate *baseDate = [gregorian dateFromComponents:base];
     
     NSTimeInterval newTimestamp = timestamp / 10000000.0f;

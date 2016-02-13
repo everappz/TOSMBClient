@@ -24,6 +24,7 @@
 #import "TOSMBConstants.h"
 
 @class TOSMBSessionDownloadTask;
+@class TOSMBSessionFile;
 @protocol TOSMBSessionDownloadTaskDelegate;
 
 @interface TOSMBSession : NSObject
@@ -33,9 +34,10 @@
 
 @property (nonatomic, copy) NSString *userName;
 @property (nonatomic, copy) NSString *password;
+@property (nonatomic, copy) NSString *domain;
 
 @property (nonatomic, readonly) TOSMBSessionState state;
-@property (nonatomic, readonly) BOOL connected;
+@property (nonatomic, readonly,getter=isConnected) BOOL connected;
 @property (nonatomic, readonly) NSInteger guest;
 
 @property (nonatomic, readonly) NSArray *downloadTasks;
@@ -54,6 +56,8 @@
 - (instancetype)initWithHostName:(NSString *)name;
 - (instancetype)initWithIPAddress:(NSString *)address;
 - (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress;
+- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress;
+
 
 /**
  Sets both the username and password for this login session. This should be set before any
@@ -62,7 +66,7 @@
  @param userName The login user name
  @param password The login password
  */
-- (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password;
+- (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password domain:(NSString *)domain;
 
 /** 
  Performs a synchronous request for a list of files from the network device for the given file path.
@@ -71,7 +75,7 @@
  @param error A pointer to an NSError object that will be non-nil if an error occurs.
  @return An NSArray of TOSMBFile objects describing the contents of the file path
  */
-- (NSArray *)requestContentsOfDirectoryAtFilePath:(NSString *)path error:(NSError **)error;
+- (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error;
 
 /**
  Performs an asynchronous request for a list of files from the network device for the given file path.
@@ -80,7 +84,8 @@
  @param error A pointer to an NSError object that will be non-nil if an error occurs.
  @return An NSArray of TOSMBFile objects describing the contents of the file path
  */
-- (void)requestContentsOfDirectoryAtFilePath:(NSString *)path success:(void (^)(NSArray *files))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *files))successHandler error:(void (^)(NSError *))errorHandler;
+
 
 /**
  Creates a download task object for asynchronously downloading a file to disk.
@@ -115,5 +120,17 @@
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
                                             failHandler:(void (^)(NSError *error))error;
+
+
+
+//Extra
+
+- (NSOperation *)requestOpenConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
+
+- (TOSMBSessionFile *)requestItemAtPath:(NSString *)path error:(NSError **)error;
+
+- (NSOperation *)requestItemAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler;
+
+- (void)performCallBackWithBlock:(void(^)(void))block;
 
 @end

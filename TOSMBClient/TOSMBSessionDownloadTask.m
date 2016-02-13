@@ -51,9 +51,9 @@
 
 @property (assign, readwrite) TOSMBSessionDownloadTaskState state;
 
-@property (nonatomic, strong, readwrite) NSString *sourceFilePath;
-@property (nonatomic, strong, readwrite) NSString *destinationFilePath;
-@property (nonatomic, strong) NSString *tempFilePath;
+@property (nonatomic, copy) NSString *sourceFilePath;
+@property (nonatomic, copy) NSString *destinationFilePath;
+@property (nonatomic, copy) NSString *tempFilePath;
 
 @property (nonatomic, weak, readwrite) TOSMBSession *session;
 @property (nonatomic, strong) TOSMBSessionFile *file;
@@ -66,8 +66,6 @@
 @property (nonatomic, assign) UIBackgroundTaskIdentifier backgroundTaskIdentifier;
 
 /** Feedback handlers */
-@property (nonatomic, weak) id<TOSMBSessionDownloadTaskDelegate> delegate;
-
 @property (nonatomic, copy) void (^progressHandler)(uint64_t totalBytesWritten, uint64_t totalBytesExpected);
 @property (nonatomic, copy) void (^successHandler)(NSString *filePath);
 @property (nonatomic, copy) void (^failHandler)(NSError *error);
@@ -86,83 +84,71 @@
 /* Feedback events sent to either the delegate or callback blocks */
 - (void)didSucceedWithFilePath:(NSString *)filePath;
 - (void)didFailWithError:(NSError *)error;
-- (void)didUpdateWriteBytes:(uint64_t)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
+- (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
 - (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
 
 @end
 
 @implementation TOSMBSessionDownloadTask
 
-- (instancetype)init
-{
+- (instancetype)init{
     //This class cannot be instantiated on its own.
     [self doesNotRecognizeSelector:_cmd];
     return nil;
 }
 
-- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate
-{
+- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
     if (self = [super init]) {
         _session = session;
-        _sourceFilePath = filePath;
-        _destinationFilePath = destinationPath.length ? destinationPath : [self documentsDirectory];
+        _sourceFilePath = [filePath copy];
+        _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
         _delegate = delegate;
-        
+        _seekOffset = NSNotFound;
         _tempFilePath = [self filePathForTemporaryDestination];
     }
     
     return self;
 }
 
-- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath progressHandler:(id)progressHandler successHandler:(id)successHandler failHandler:(id)failHandler
-{
+- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath progressHandler:(id)progressHandler successHandler:(id)successHandler failHandler:(id)failHandler{
     if (self = [super init]) {
         _session = session;
-        _sourceFilePath = filePath;
-        _destinationFilePath = destinationPath.length ? destinationPath : [self documentsDirectory];
-        
-        _progressHandler = progressHandler;
-        _successHandler = successHandler;
-        _failHandler = failHandler;
-        
+        _sourceFilePath = [filePath copy];
+        _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
+        _progressHandler = [progressHandler copy];
+        _successHandler = [successHandler copy];
+        _failHandler = [failHandler copy];
+        _seekOffset = NSNotFound;
         _tempFilePath = [self filePathForTemporaryDestination];
     }
     
     return self;
 }
 
-- (void)dealloc
-{
+- (void)dealloc{
     smb_session_destroy(self.downloadSession);
 }
+
 #pragma mark - Temporary Destination Methods -
-- (NSString *)filePathForTemporaryDestination
-{
+
+- (NSString *)filePathForTemporaryDestination{
     NSString *fileName = [[self hashForFilePath] stringByAppendingPathExtension:@"smb.data"];
     return [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
 }
 
-- (NSString *)hashForFilePath
-{
+- (NSString *)hashForFilePath{
     NSString *filePath = self.sourceFilePath.lowercaseString;
-    
     NSData *data = [filePath dataUsingEncoding:NSUTF8StringEncoding];
     uint8_t digest[CC_SHA1_DIGEST_LENGTH];
-    
     CC_SHA1(data.bytes, (unsigned int)data.length, digest);
-    
     NSMutableString *output = [NSMutableString stringWithCapacity:CC_SHA1_DIGEST_LENGTH * 2];
-    
-    for (int i = 0; i < CC_SHA1_DIGEST_LENGTH; i++)
-    {
+    for (int i = 0; i < CC_SHA1_DIGEST_LENGTH; i++){
         [output appendFormat:@"%02x", digest[i]];
     }
-    
     return [NSString stringWithString:output];
 }
 
-- (NSString *)finalFilePathForDownloadedFile
-{
+- (NSString *)finalFilePathForDownloadedFile{
     NSString *path = self.destinationFilePath;
     
     //Check to ensure the destination isn't referring to a file name
@@ -192,128 +178,130 @@
     return newFilePath;
 }
 
-- (NSString *)documentsDirectory
-{
+- (NSString *)documentsDirectory{
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
     return basePath;
 }
 
 #pragma mark - Public Control Methods -
-- (void)resume
-{
-    if (self.state == TOSMBSessionDownloadTaskStateRunning)
+
+- (void)resume{
+    if (self.state == TOSMBSessionDownloadTaskStateRunning){
         return;
-    
+    }
     [self setupDownloadOperation];
     [self.session.downloadsQueue addOperation:self.downloadOperation];
     self.state = TOSMBSessionDownloadTaskStateRunning;
 }
 
-- (void)suspend
-{
-    if (self.state != TOSMBSessionDownloadTaskStateRunning)
+- (void)suspend{
+    if (self.state != TOSMBSessionDownloadTaskStateRunning){
         return;
-    
+    }
     [self.downloadOperation cancel];
     self.state = TOSMBSessionDownloadTaskStateSuspended;
     self.downloadOperation = nil;
 }
 
-- (void)cancel
-{
-    if (self.state != TOSMBSessionDownloadTaskStateRunning)
+- (void)cancel{
+    if (self.state != TOSMBSessionDownloadTaskStateRunning){
         return;
-    
+    }
     id deleteBlock = ^{
         [[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];
     };
-    
     NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
     [deleteOperation addExecutionBlock:deleteBlock];
-    [deleteOperation addDependency:self.downloadOperation];
+    if(self.downloadOperation){
+        [deleteOperation addDependency:self.downloadOperation];
+    }
     [self.session.downloadsQueue addOperation:deleteOperation];
-    
     [self.downloadOperation cancel];
     self.state = TOSMBSessionDownloadTaskStateCancelled;
-    
     self.downloadOperation = nil;
 }
 
 #pragma mark - Feedback Methods -
-- (BOOL)canBeResumed
-{
-    if ([[NSFileManager defaultManager] fileExistsAtPath:self.tempFilePath] == NO)
-        return NO;
 
+- (BOOL)canBeResumed{
+    if ([[NSFileManager defaultManager] fileExistsAtPath:self.tempFilePath] == NO){
+        return NO;
+    }
     NSDate *modificationTime = [[[NSFileManager defaultManager] attributesOfItemAtPath:self.tempFilePath error:nil] fileModificationDate];
     if ([modificationTime isEqual:self.file.modificationTime] == NO) {
         return NO;
     }
-    
     return YES;
 }
 
-- (void)didSucceedWithFilePath:(NSString *)filePath
-{
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        if (self.delegate && [self.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)])
-            [self.delegate downloadTask:self didFinishDownloadingToPath:filePath];
-        
-        if (self.successHandler)
-            self.successHandler(filePath);
-    });
+- (void)didSucceedWithFilePath:(NSString *)filePath{
+    
+    __weak typeof (self) weakSelf = self;
+    
+    [self.session performCallBackWithBlock:^{
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)]){
+            [weakSelf.delegate downloadTask:weakSelf didFinishDownloadingToPath:filePath];
+        }
+        if (weakSelf.successHandler){
+            weakSelf.successHandler(filePath);
+        }
+    }];
+    
 }
 
-- (void)didFailWithError:(NSError *)error
-{
-    dispatch_sync(dispatch_get_main_queue(), ^{
-        if (self.delegate && [self.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)])
-            [self.delegate downloadTask:self didCompleteWithError:error];
-        
-        if (self.failHandler)
-            self.failHandler(error);
-    });
-}
+- (void)didFailWithError:(NSError *)error{
 
-- (void)didUpdateWriteBytes:(uint64_t)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected
-{
-    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-        if (self.delegate && [self.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)])
-            [self.delegate downloadTask:self didWriteBytes:bytesWritten totalBytesReceived:self.countOfBytesReceived totalBytesExpectedToReceive:self.countOfBytesExpectedToReceive];
-        
-        if (self.progressHandler)
-            self.progressHandler(self.countOfBytesReceived, self.countOfBytesExpectedToReceive);
+    __weak typeof (self) weakSelf = self;
+    
+    [self.session performCallBackWithBlock:^{
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)]){
+            [weakSelf.delegate downloadTask:weakSelf didCompleteWithError:error];
+        }
+        if (weakSelf.failHandler){
+            weakSelf.failHandler(error);
+        }
     }];
 }
 
-- (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected
-{
-    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
-        if (self.delegate && [self.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)])
-            [self.delegate downloadTask:self didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
+- (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
+    __weak typeof (self) weakSelf = self;
+    [self.session performCallBackWithBlock:^{
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
+            [weakSelf.delegate downloadTask:weakSelf didWriteBytes:bytesWritten totalBytesReceived:weakSelf.countOfBytesReceived totalBytesExpectedToReceive:weakSelf.countOfBytesExpectedToReceive];
+        }
+        if (weakSelf.progressHandler){
+            weakSelf.progressHandler(weakSelf.countOfBytesReceived, weakSelf.countOfBytesExpectedToReceive);
+        }
+    }];
+}
+
+- (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
+    __weak typeof (self) weakSelf = self;
+    [self.session performCallBackWithBlock:^{
+        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)]){
+            [weakSelf.delegate downloadTask:weakSelf didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
+        }
     }];
 }
 
 #pragma mark - Downloading -
-- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID
-{
+
+- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
     smb_stat fileStat = smb_fstat(self.downloadSession, treeID, fileCString);
-    if (!fileStat)
+    if (!fileStat){
         return nil;
-    
+    }
     TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat session:nil parentDirectoryFilePath:filePath];
-    
     smb_stat_destroy(fileStat);
-    
     return file;
 }
 
-- (void)setupDownloadOperation
-{
-    if (self.downloadOperation)
+- (void)setupDownloadOperation{
+    if (self.downloadOperation){
         return;
+    }
     
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     
@@ -331,8 +319,8 @@
     self.downloadOperation = operation;
 }
 
-- (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation
-{
+- (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation{
+    
     if (weakOperation.isCancelled)
         return;
     
@@ -452,6 +440,9 @@
     //Open a handle to the file and skip ahead if we're resuming
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:self.tempFilePath];
     unsigned long long seekOffset = (ssize_t)[fileHandle seekToEndOfFile];
+    if(self.seekOffset!=NSNotFound){
+        seekOffset = self.seekOffset;
+    }
     self.countOfBytesReceived = seekOffset;
     
     //Create a background handle so the download will continue even if the app is suspended
@@ -469,14 +460,15 @@
     
     do {
         bytesRead = smb_fread(self.downloadSession, fileID, buffer, bufferSize);
-        [fileHandle writeData:[NSData dataWithBytes:buffer length:bufferSize]];
+        NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
+        [fileHandle writeData:data];
         
         if (weakOperation.isCancelled)
             break;
         
         self.countOfBytesReceived += bytesRead;
         
-        [self didUpdateWriteBytes:bytesRead totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
+        [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
     } while (bytesRead > 0);
     
     //Set the modification date to match the one on the SMB device so we can compare the two at a later date
