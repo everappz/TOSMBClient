@@ -28,6 +28,7 @@
 #import "TONetBIOSNameService.h"
 #import "TOSMBSessionDownloadTask.h"
 #import "TOHost.h"
+#import "TOSMBSessionUploadTask.h"
 
 #import "smb_session.h"
 #import "smb_share.h"
@@ -52,6 +53,22 @@
 
 @end
 
+
+@interface TOSMBSessionUploadTask ()
+
+
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                progressHandler:(id)progressHandler
+                 successHandler:(id)successHandler
+                    failHandler:(id)failHandler;
+
+- (NSBlockOperation *)uploadOperation;
+
+@end
+
+
 @interface TOSMBSession ()
 
 /* The session pointer responsible for this object. */
@@ -61,9 +78,7 @@
 @property (nonatomic, assign, readwrite) NSInteger guest;
 
 @property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests. */
-@property (nonatomic, strong) NSOperationQueue *downloadsQueue; /* Operation queue for file downloads. */
-
-@property (nonatomic, strong, readwrite) NSArray *downloadTasks;
+@property (nonatomic, strong) NSOperationQueue *transferQueue; /* Operation queue for file transfers. */
 
 @property (nonatomic, strong) NSDate *lastRequestDate;
 
@@ -78,7 +93,7 @@
 
 /* Asynchronous operation management */
 - (void)setupDataQueue;
-- (void)setupDownloadQueue;
+- (void)setupTransferQueue;
 
 @property (nonatomic, strong)dispatch_queue_t callBackQueue;
 
@@ -90,7 +105,7 @@
 
 - (instancetype)init{
     if (self = [super init]) {
-        self.callBackQueue = dispatch_queue_create([@"com.smbsession.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
+        self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
         _session = smb_session_new();
         if (_session == NULL)
             return nil;
@@ -424,10 +439,10 @@
 }
 
 #pragma mark - Download Tasks -
+
 - (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
-    [self setupDownloadQueue];
+    [self setupTransferQueue];
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath delegate:delegate];
-    self.downloadTasks = [self.downloadTasks ? : @[] arrayByAddingObjectsFromArray:@[task]];
     return task;
 }
 
@@ -436,9 +451,8 @@
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
                                             failHandler:(void (^)(NSError *error))failHandler{
-    [self setupDownloadQueue];
+    [self setupTransferQueue];
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath progressHandler:progressHandler successHandler:completionHandler failHandler:failHandler];
-    self.downloadTasks = [self.downloadTasks ? : @[] arrayByAddingObjectsFromArray:@[task]];
     return task;
 }
 
@@ -1024,6 +1038,19 @@
     return operation;
 }
 
+
+#pragma mark - Upload Task -
+
+- (TOSMBSessionUploadTask *)uploadTaskForFileAtPath:(NSString *)path
+                                    destinationPath:(NSString *)destinationPath
+                                    progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
+                                  completionHandler:(void (^)(NSString *filePath))completionHandler
+                                        failHandler:(void (^)(NSError *error))errorHandler{
+    [self setupTransferQueue];
+    TOSMBSessionUploadTask *task = [[TOSMBSessionUploadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath progressHandler:progressHandler successHandler:completionHandler failHandler:errorHandler];
+    return task;
+}
+
 #pragma mark - Concurrency Management -
 
 - (void)setupDataQueue{
@@ -1034,11 +1061,11 @@
     self.dataQueue.maxConcurrentOperationCount = 1;
 }
 
-- (void)setupDownloadQueue{
-    if (self.downloadsQueue){
+- (void)setupTransferQueue{
+    if (self.transferQueue){
         return;
     }
-    self.downloadsQueue = [[NSOperationQueue alloc] init];
+    self.transferQueue = [[NSOperationQueue alloc] init];
 }
 
 - (void)performCallBackWithBlock:(void(^)(void))block{

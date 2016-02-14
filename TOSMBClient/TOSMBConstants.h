@@ -38,6 +38,8 @@ typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
     TOSMBSessionErrorCodeUnableToMoveFile = 1007,
     TOSMBSessionErrorCodeUnableToCreateDirectory = 1008,
     TOSMBSessionErrorCodeUnableToDeleteItem = 1009,
+    TOSMBSessionErrorCodeDirectoryUploaded = 1010,
+    TOSMBSessionErrorCodeFailToUpload = 1011,
 };
 
 /** NetBIOS Service Device Types */
@@ -57,12 +59,12 @@ typedef NS_ENUM(NSInteger, TOSMBSessionState) {
 };
 
 /** SMB File Download Connection State */
-typedef NS_ENUM(NSInteger, TOSMBSessionDownloadTaskState) {
-    TOSMBSessionDownloadTaskStateReady,
-    TOSMBSessionDownloadTaskStateRunning,
-    TOSMBSessionDownloadTaskStateSuspended,
-    TOSMBSessionDownloadTaskStateCancelled,
-    TOSMBSessionDownloadTaskStateCompleted
+typedef NS_ENUM(NSInteger, TOSMBSessionTransferTaskState) {
+    TOSMBSessionTransferTaskStateReady,
+    TOSMBSessionTransferTaskStateRunning,
+    TOSMBSessionTransferTaskStateSuspended,
+    TOSMBSessionTransferTaskStateCancelled,
+    TOSMBSessionTransferTaskStateCompleted
 };
 
 extern TONetBIOSNameServiceType TONetBIOSNameServiceTypeForCType(char type);

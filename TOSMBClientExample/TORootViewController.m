@@ -67,7 +67,7 @@
     }];
 }
 
-- (void)downloadTask:(TOSMBSessionDownloadTask *)downloadTask didWriteBytes:(uint64_t)bytesWritten totalBytesReceived:(uint64_t)totalBytesReceived totalBytesExpectedToReceive:(int64_t)totalBytesToReceive
+- (void)downloadTask:(TOSMBSessionDownloadTask *)downloadTask didWriteBytes:(NSData *)bytesWritten totalBytesReceived:(uint64_t)totalBytesReceived totalBytesExpectedToReceive:(int64_t)totalBytesToReceive
 {
     self.progressView.progress = (float)totalBytesReceived / (float)totalBytesToReceive;
 }

@@ -91,7 +91,7 @@
     controller.rootController = self.rootController;
     [self.navigationController pushViewController:controller animated:YES];
     
-    [session requestContentsOfDirectoryAtFilePath:@"/"
+    [session contentsOfDirectoryAtPath:@"/"
                                           success:^(NSArray *files){ controller.files = files; }
                                             error:^(NSError *error) {
                                                 UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"SMB Client Error" message:error.localizedDescription delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];

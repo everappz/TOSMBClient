@@ -77,7 +77,7 @@
     controller.navigationItem.rightBarButtonItem = self.navigationItem.rightBarButtonItem;
     [self.navigationController pushViewController:controller animated:YES];
     
-    [self.session requestContentsOfDirectoryAtFilePath:file.filePath success:^(NSArray *files) {
+    [self.session contentsOfDirectoryAtPath:file.filePath success:^(NSArray *files) {
         controller.files = files;
     } error:^(NSError *error) {
         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"SMB Client Error" message:error.localizedDescription delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];

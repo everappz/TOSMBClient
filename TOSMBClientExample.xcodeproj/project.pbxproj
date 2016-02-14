@@ -25,6 +25,8 @@
 		22416F681B7125A3007B8A8B /* TOFilesTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 22416F671B7125A3007B8A8B /* TOFilesTableViewController.m */; };
 		22AE8B881B6F66E4008412CF /* TOSMBSessionDownloadTask.m in Sources */ = {isa = PBXBuildFile; fileRef = 22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */; };
 		22CB5AEB1B78929B006F05F2 /* TORootViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 22CB5AEA1B78929B006F05F2 /* TORootViewController.m */; };
+		EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */; };
+		EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +83,11 @@
 		22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionDownloadTask.m; sourceTree = "<group>"; };
 		22CB5AE91B78929B006F05F2 /* TORootViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TORootViewController.h; sourceTree = "<group>"; };
 		22CB5AEA1B78929B006F05F2 /* TORootViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TORootViewController.m; sourceTree = "<group>"; };
+		EFBDA84A1C70BBFF001BDEF6 /* TOHost.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOHost.h; sourceTree = "<group>"; };
+		EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOHost.m; sourceTree = "<group>"; };
+		EFBDA84C1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionUploadTask.h; sourceTree = "<group>"; };
+		EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionUploadTask.m; sourceTree = "<group>"; };
+		EFBDA8501C70BC15001BDEF6 /* smb_dir.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = smb_dir.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -185,6 +192,10 @@
 				22301F6F1B6DED2500326F84 /* TOSMBSessionFile.m */,
 				22AE8B861B6F66E4008412CF /* TOSMBSessionDownloadTask.h */,
 				22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */,
+				EFBDA84C1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.h */,
+				EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */,
+				EFBDA84A1C70BBFF001BDEF6 /* TOHost.h */,
+				EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */,
 			);
 			path = TOSMBClient;
 			sourceTree = "<group>";
@@ -203,6 +214,7 @@
 		2214DCE71B662632003E3EF1 /* bdsm */ = {
 			isa = PBXGroup;
 			children = (
+				EFBDA8501C70BC15001BDEF6 /* smb_dir.h */,
 				22236CFA1B68791800176C34 /* libtasn1.h */,
 				2214DCE81B662632003E3EF1 /* bdsm.h */,
 				2214DCEA1B662632003E3EF1 /* netbios_defs.h */,
@@ -321,11 +333,13 @@
 				2214DCC81B661CD2003E3EF1 /* TORootTableViewController.m in Sources */,
 				2214DCF61B666766003E3EF1 /* TONetBIOSNameService.m in Sources */,
 				2214DCC51B661CD2003E3EF1 /* TOAppDelegate.m in Sources */,
+				EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */,
 				22301F701B6DED2500326F84 /* TOSMBSessionFile.m in Sources */,
 				22AE8B881B6F66E4008412CF /* TOSMBSessionDownloadTask.m in Sources */,
 				22236CF91B67C2C700176C34 /* TOSMBSession.m in Sources */,
 				2214DCC21B661CD2003E3EF1 /* main.m in Sources */,
 				2214DCF91B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m in Sources */,
+				EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */,
 				22CB5AEB1B78929B006F05F2 /* TORootViewController.m in Sources */,
 				2214DCFC1B66847B003E3EF1 /* TOSMBConstants.m in Sources */,
 			);

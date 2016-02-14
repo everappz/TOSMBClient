@@ -24,6 +24,7 @@
 #import "TOSMBConstants.h"
 
 @class TOSMBSessionDownloadTask;
+@class TOSMBSessionUploadTask;
 @class TOSMBSessionFile;
 @protocol TOSMBSessionDownloadTaskDelegate;
 
@@ -39,8 +40,6 @@
 @property (nonatomic, readonly) TOSMBSessionState state;
 @property (nonatomic, readonly,getter=isConnected) BOOL connected;
 @property (nonatomic, readonly) NSInteger guest;
-
-@property (nonatomic, readonly) NSArray *downloadTasks;
 
 /** 
  Creates a new SMB object, but doesn't try to connect until the first request is made.
@@ -123,6 +122,14 @@
 - (NSOperation *)createDirectoryAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler error:(void (^)(NSError *))errorHandler;
 
 - (NSOperation *)deleteItemAtPath:(NSString *)path success:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
+
+- (TOSMBSessionUploadTask *)uploadTaskForFileAtPath:(NSString *)path
+                                        destinationPath:(NSString *)destinationPath
+                                        progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
+                                      completionHandler:(void (^)(NSString *filePath))completionHandler
+                                            failHandler:(void (^)(NSError *error))error;
+
+//private
 
 - (void)performCallBackWithBlock:(void(^)(void))block;
 

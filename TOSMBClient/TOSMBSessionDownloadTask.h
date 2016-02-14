@@ -99,7 +99,7 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 @property (nonatomic,assign)unsigned long long seekOffset;
 
 /** The state of the download task. */
-@property (readonly) TOSMBSessionDownloadTaskState state;
+@property (readonly) TOSMBSessionTransferTaskState state;
 
 /**
  Resumes an existing download, or starts a new one otherwise.

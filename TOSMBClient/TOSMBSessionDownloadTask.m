@@ -35,7 +35,7 @@
 
 @interface TOSMBSession ()
 
-@property (readonly) NSOperationQueue *downloadsQueue;
+@property (readonly) NSOperationQueue *transferQueue;
 
 - (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session;
 - (NSString *)shareNameFromPath:(NSString *)path;
@@ -49,7 +49,7 @@
 
 @interface TOSMBSessionDownloadTask ()
 
-@property (assign, readwrite) TOSMBSessionDownloadTaskState state;
+@property (assign, readwrite) TOSMBSessionTransferTaskState state;
 
 @property (nonatomic, copy) NSString *sourceFilePath;
 @property (nonatomic, copy) NSString *destinationFilePath;
@@ -187,25 +187,25 @@
 #pragma mark - Public Control Methods -
 
 - (void)resume{
-    if (self.state == TOSMBSessionDownloadTaskStateRunning){
+    if (self.state == TOSMBSessionTransferTaskStateRunning){
         return;
     }
     [self setupDownloadOperation];
-    [self.session.downloadsQueue addOperation:self.downloadOperation];
-    self.state = TOSMBSessionDownloadTaskStateRunning;
+    [self.session.transferQueue addOperation:self.downloadOperation];
+    self.state = TOSMBSessionTransferTaskStateRunning;
 }
 
 - (void)suspend{
-    if (self.state != TOSMBSessionDownloadTaskStateRunning){
+    if (self.state != TOSMBSessionTransferTaskStateRunning){
         return;
     }
     [self.downloadOperation cancel];
-    self.state = TOSMBSessionDownloadTaskStateSuspended;
+    self.state = TOSMBSessionTransferTaskStateSuspended;
     self.downloadOperation = nil;
 }
 
 - (void)cancel{
-    if (self.state != TOSMBSessionDownloadTaskStateRunning){
+    if (self.state != TOSMBSessionTransferTaskStateRunning){
         return;
     }
     id deleteBlock = ^{
@@ -216,9 +216,9 @@
     if(self.downloadOperation){
         [deleteOperation addDependency:self.downloadOperation];
     }
-    [self.session.downloadsQueue addOperation:deleteOperation];
+    [self.session.transferQueue addOperation:deleteOperation];
     [self.downloadOperation cancel];
-    self.state = TOSMBSessionDownloadTaskStateCancelled;
+    self.state = TOSMBSessionTransferTaskStateCancelled;
     self.downloadOperation = nil;
 }
 
@@ -489,7 +489,7 @@
     NSString *finalDestinationPath = [self finalFilePathForDownloadedFile];
     [[NSFileManager defaultManager] moveItemAtPath:self.tempFilePath toPath:finalDestinationPath error:nil];
     
-    self.state =TOSMBSessionDownloadTaskStateCompleted;
+    self.state =TOSMBSessionTransferTaskStateCompleted;
     
     //Alert the delegate that we finished, so they may perform any additional cleanup operations
     [self didSucceedWithFilePath:finalDestinationPath];
