@@ -58,7 +58,6 @@
 - (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress;
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress;
 
-
 /**
  Sets both the username and password for this login session. This should be set before any
  requests are made.
@@ -68,15 +67,6 @@
  */
 - (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password domain:(NSString *)domain;
 
-/** 
- Performs a synchronous request for a list of files from the network device for the given file path.
- 
- @param path The file path to request. Supplying nil or "" will reuest the root list of share folders
- @param error A pointer to an NSError object that will be non-nil if an error occurs.
- @return An NSArray of TOSMBFile objects describing the contents of the file path
- */
-- (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error;
-
 /**
  Performs an asynchronous request for a list of files from the network device for the given file path.
  
@@ -85,7 +75,6 @@
  @return An NSArray of TOSMBFile objects describing the contents of the file path
  */
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *files))successHandler error:(void (^)(NSError *))errorHandler;
-
 
 /**
  Creates a download task object for asynchronously downloading a file to disk.
@@ -125,11 +114,15 @@
 
 //Extra
 
-- (NSOperation *)requestOpenConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)openConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
 
-- (TOSMBSessionFile *)requestItemAtPath:(NSString *)path error:(NSError **)error;
+- (NSOperation *)itemAttributesAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler;
 
-- (NSOperation *)requestItemAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath success:(void (^)(TOSMBSessionFile *newFile))successHandler error:(void (^)(NSError *))errorHandler;
+
+- (NSOperation *)createDirectoryAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler error:(void (^)(NSError *))errorHandler;
+
+- (NSOperation *)deleteItemAtPath:(NSString *)path success:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
 
 - (void)performCallBackWithBlock:(void(^)(void))block;
 

@@ -32,6 +32,7 @@
 #import "smb_session.h"
 #import "smb_share.h"
 #import "smb_stat.h"
+#import "smb_dir.h"
 
 @interface TOSMBSessionDownloadTask ()
 
@@ -147,7 +148,10 @@
 }
 
 - (void)dealloc{
-    smb_session_destroy(self.session);
+    if(_session!=NULL){
+        smb_session_destroy(_session);
+        _session = NULL;
+    }
 }
 
 #pragma mark - Authorization -
@@ -199,7 +203,7 @@
     }
     
     if (self.session == session) {
-        if (self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > 60) {
+        if (self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > 60.0) {
             smb_session_destroy(self.session);
             self.session = smb_session_new();
             session = self.session;
@@ -356,31 +360,33 @@
     //Add the wildcard symbol for everything in this folder
     relativePath = [relativePath stringByAppendingString:@"*"]; //wildcard to search for all files
     
-    //Query for a list of files in this directory
-    smb_stat_list statList = smb_find(self.session, shareID, relativePath.UTF8String);
-    size_t listCount = smb_stat_list_count(statList);
-    if (listCount == 0)
-        return nil;
-    
     NSMutableArray *fileList = [NSMutableArray array];
     
-    for (NSInteger i = 0; i < listCount; i++) {
-        smb_stat item = smb_stat_list_at(statList, i);
-        const char* name = smb_stat_name(item);
-        if (name[0] == '.') { //skip hidden files
-            continue;
+    //Query for a list of files in this directory
+    smb_stat_list statList = smb_find(self.session, shareID, relativePath.UTF8String);
+    
+    if(statList!=NULL){
+        size_t listCount = smb_stat_list_count(statList);
+        if (listCount != 0){
+            for (NSInteger i = 0; i < listCount; i++) {
+                smb_stat item = smb_stat_list_at(statList, i);
+                const char* name = smb_stat_name(item);
+                if (name[0] == '.') { //skip hidden files
+                    continue;
+                }
+                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item session:self parentDirectoryFilePath:path];
+                [fileList addObject:file];
+            }
         }
-        
-        TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item session:self parentDirectoryFilePath:path];
-        [fileList addObject:file];
+        smb_stat_list_destroy(statList);
     }
-    smb_stat_list_destroy(statList);
+    
     smb_tree_disconnect(self.session, shareID);
     
     if (fileList.count == 0)
         return nil;
     
-    return [fileList sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]]];
+    return fileList;
 }
 
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler{
@@ -438,7 +444,7 @@
 
 #pragma mark - Open Connection -
 
-- (NSOperation *)requestOpenConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
+- (NSOperation *)openConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
     //setup operation queue as needed
     [self setupDataQueue];
     
@@ -472,7 +478,9 @@
 
 #pragma mark - Item Info -
 
-- (TOSMBSessionFile *)requestItemAtPath:(NSString *)path error:(NSError **)error{
+- (TOSMBSessionFile *)itemAttributesAtPath:(NSString *)path error:(NSError **)error{
+    
+    TOSMBSessionFile *file = nil;
     
     //Attempt a connection attempt (If it has not already been done)
     NSError *resultError = [self attemptConnection];
@@ -523,18 +531,16 @@
             resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
             *error = resultError;
         }
-        return nil;
     }
-    
-    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat session:self parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
-    
-    smb_stat_destroy(stat);
+    else{
+        file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat session:self parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
+        smb_stat_destroy(stat);
+    }
     smb_tree_disconnect(self.session, shareID);
-    
     return file;
 }
 
-- (NSOperation *)requestItemAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler{
+- (NSOperation *)itemAttributesAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler{
     
     //setup operation queue as needed
     [self setupDataQueue];
@@ -548,7 +554,7 @@
         if (weakOperation.cancelled) { return; }
         
         NSError *error = nil;
-        TOSMBSessionFile *file = [weakSelf requestItemAtPath:path error:&error];
+        TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:path error:&error];
         
         if (weakOperation.cancelled) { return; }
         
@@ -568,6 +574,455 @@
     return operation;
 }
 
+#pragma mark - Move Item -
+
+- (BOOL)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error{
+    
+    NSError *resultError = [self attemptConnection];
+    if (error && resultError){
+        *error = resultError;
+    }
+    
+    if (resultError){
+        return NO;
+    }
+    
+    if (fromPath.length == 0 || [fromPath isEqualToString:@"/"] || toPath.length == 0 || [toPath isEqualToString:@"/"]) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    //Replace any backslashes with forward slashes
+    fromPath = [fromPath stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    toPath = [toPath stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    //Work out just the share name from the path (The first directory in the string)
+    NSString *shareName = [self shareNameFromPath:fromPath];
+    
+    //Connect to that share
+    //If not, make a new connection
+    const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
+    smb_tid shareID = smb_tree_connect(self.session, cStringName);
+    if (shareID < 0) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *relativeFromPath = [self filePathExcludingSharePathFromPath:fromPath];
+    relativeFromPath = [NSString stringWithFormat:@"\\%@",relativeFromPath];
+    relativeFromPath = [relativeFromPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    NSString *relativeToPath = [self filePathExcludingSharePathFromPath:toPath];
+    relativeToPath = [NSString stringWithFormat:@"\\%@",relativeToPath];
+    relativeToPath = [relativeToPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    const char *relativeFromPathCString = [relativeFromPath cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *relativeToPathCString = [relativeToPath cStringUsingEncoding:NSUTF8StringEncoding];
+    
+    int result = smb_file_mv(self.session, shareID, relativeFromPathCString, relativeToPathCString);
+    
+    if(result!=0){
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeUnableToMoveFile);
+            *error = resultError;
+        }
+    }
+    
+    smb_tree_disconnect(self.session, shareID);
+    
+    return (result==0);
+}
+
+- (NSOperation *)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath success:(void (^)(TOSMBSessionFile *newFile))successHandler error:(void (^)(NSError *))errorHandler{
+    [self setupDataQueue];
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    __weak typeof(self) weakSelf = self;
+    __weak NSBlockOperation *weakOperation = operation;
+    id operationBlock = ^{
+        if (weakOperation.cancelled) { return; }
+        NSError *error = nil;
+        BOOL success = [weakSelf moveItemAtPath:fromPath toPath:toPath error:&error];
+        if (weakOperation.cancelled) { return; }
+        if (success==NO || error) {
+            if (errorHandler) {
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
+            }
+        }
+        else {
+            TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:toPath error:&error];
+            if (successHandler) {
+                [weakSelf performCallBackWithBlock:^{ successHandler(file); }];
+            }
+        }
+    };
+    [operation addExecutionBlock:operationBlock];
+    [self.dataQueue addOperation:operation];
+    return operation;
+}
+
+
+#pragma mark - Create Directory -
+
+- (BOOL)createDirectoryAtPath:(NSString *)path error:(NSError **)error{
+    
+    NSError *resultError = [self attemptConnection];
+    if (error && resultError){
+        *error = resultError;
+    }
+    
+    if (resultError){
+        return NO;
+    }
+    
+    if (path.length == 0 || [path isEqualToString:@"/"]) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    //Replace any backslashes with forward slashes
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    //Work out just the share name from the path (The first directory in the string)
+    NSString *shareName = [self shareNameFromPath:path];
+    
+    //Connect to that share
+    //If not, make a new connection
+    const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
+    smb_tid shareID = smb_tree_connect(self.session, cStringName);
+    if (shareID < 0) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
+
+    int result = smb_directory_create(self.session,shareID,relativePathCString);
+    
+    if(result!=0){
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeUnableToCreateDirectory);
+            *error = resultError;
+        }
+    }
+    
+    smb_tree_disconnect(self.session, shareID);
+    
+    return (result==0);
+}
+
+- (NSOperation *)createDirectoryAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler error:(void (^)(NSError *))errorHandler{
+    [self setupDataQueue];
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    __weak typeof(self) weakSelf = self;
+    __weak NSBlockOperation *weakOperation = operation;
+    id operationBlock = ^{
+        if (weakOperation.cancelled) { return; }
+        NSError *error = nil;
+        BOOL success = [weakSelf createDirectoryAtPath:path error:&error];
+        if (weakOperation.cancelled) { return; }
+        if (success==NO || error) {
+            if (errorHandler) {
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
+            }
+        }
+        else {
+            TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:path error:&error];
+            if (successHandler) {
+                [weakSelf performCallBackWithBlock:^{ successHandler(file); }];
+            }
+        }
+    };
+    [operation addExecutionBlock:operationBlock];
+    [self.dataQueue addOperation:operation];
+    return operation;
+}
+
+
+#pragma mark - Delete Item -
+
+
+- (BOOL)recursiveContentOfDirectoryAtPath:(NSString *)dirPath inShare:(smb_tid)shareID items:(NSMutableArray **)items error:(NSError **)error{
+    
+    if (dirPath.length == 0 || [dirPath isEqualToString:@"/"]) {
+        if (error) {
+            NSError *resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *path = dirPath;
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    if (![[relativePath substringFromIndex:relativePath.length-1] isEqualToString:@"\\"]){
+        relativePath = [relativePath stringByAppendingString:@"\\"];
+    }
+    relativePath = [relativePath stringByAppendingString:@"*"];
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
+    smb_stat_list statList = smb_find(self.session, shareID, relativePathCString);
+    
+    if(statList==NULL){
+        if (error) {
+            NSError *resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+
+    size_t listCount = smb_stat_list_count(statList);
+    
+    NSMutableArray *directories = [[NSMutableArray alloc] init];
+    
+    if (listCount > 0){
+        for (NSInteger i = 0; i < listCount; i++) {
+            smb_stat item = smb_stat_list_at(statList, i);
+            const char* name = smb_stat_name(item);
+            NSString *itemName = [[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding];
+            if([itemName isEqualToString:@"."] || [itemName isEqualToString:@".."]){
+                continue;
+            }
+            TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item session:self parentDirectoryFilePath:path];
+            
+            if(items){
+                [*items addObject:file];
+            }
+            
+            if(file.directory){
+                [directories addObject:file];
+            }
+        }
+    }
+    smb_stat_list_destroy(statList);
+    
+    for(TOSMBSessionFile *dir in directories){
+        BOOL result = [self recursiveContentOfDirectoryAtPath:dir.filePath inShare:shareID items:items error:error];
+        if(result==NO){
+            return NO;
+        }
+    }
+    
+    return YES;
+}
+
+
+- (BOOL)deleteDirectoryAtPath:(NSString *)dirPath inShare:(smb_tid)shareID error:(NSError **)error{
+    
+    if (dirPath.length == 0 || [dirPath isEqualToString:@"/"]) {
+        if (error) {
+            NSError *resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *path = dirPath;
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
+    
+    uint32_t result = smb_directory_rm(self.session, shareID, relativePathCString);
+    
+    if(result!=0){
+        if (error) {
+            *error = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
+        }
+    }
+    
+    return (result==0);
+}
+
+- (BOOL)deleteFileAtPath:(NSString *)filePath inShare:(smb_tid)shareID error:(NSError **)error{
+    
+    if (filePath.length == 0 || [filePath isEqualToString:@"/"]) {
+        if (error) {
+            NSError *resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *path = filePath;
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
+    
+    uint32_t result = smb_file_rm(self.session, shareID, relativePathCString);
+
+    if(result!=0){
+        if (error) {
+            *error = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
+        }
+    }
+
+    return (result==0);
+}
+
+- (BOOL)deleteItemAtPath:(NSString *)path error:(NSError **)error{
+    
+    NSError *resultError = [self attemptConnection];
+    int result = -1;
+    if (error && resultError){
+        *error = resultError;
+    }
+    
+    if (resultError){
+        return NO;
+    }
+    
+    if (path.length == 0 || [path isEqualToString:@"/"]) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeUnknown);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    //Replace any backslashes with forward slashes
+    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    
+    //Work out just the share name from the path (The first directory in the string)
+    NSString *shareName = [self shareNameFromPath:path];
+    
+    //Connect to that share
+    //If not, make a new connection
+    const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
+    smb_tid shareID = smb_tree_connect(self.session, cStringName);
+    if (shareID < 0) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
+            *error = resultError;
+        }
+        return NO;
+    }
+    
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
+    
+    smb_stat stat = smb_fstat(self.session, shareID, relativePathCString);
+    
+    if(stat==NULL){
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
+            *error = resultError;
+        }
+    }
+    else{
+        
+        BOOL directory = (smb_stat_get(stat, SMB_STAT_ISDIR) != 0);
+        smb_stat_destroy(stat);
+
+        if(directory){
+            
+            NSMutableArray *childItems = [[NSMutableArray alloc] init];
+            BOOL fetchResultSuccess = [self recursiveContentOfDirectoryAtPath:path inShare:shareID items:&childItems error:nil];
+            
+            if(fetchResultSuccess){
+                if(childItems.count>0){
+                    for(NSInteger index = childItems.count-1;index>=0;index--){
+                        TOSMBSessionFile *file = [childItems objectAtIndex:index];
+                        BOOL success = NO;
+                        if(file.directory){
+                           success = [self deleteDirectoryAtPath:file.filePath inShare:shareID error:nil];
+                        }
+                        else{
+                            success = [self deleteFileAtPath:file.filePath inShare:shareID error:nil];
+                        }
+                        if(success==NO){
+                            break;
+                        }
+                    }
+                }
+                result = [self deleteDirectoryAtPath:path inShare:shareID error:error];
+            }
+            else{
+                result = -1;
+            }
+            
+        }
+        else{
+            result = [self deleteFileAtPath:path inShare:shareID error:error];
+        }
+
+        if(result!=0){
+            
+            //double check
+            smb_stat stat = smb_fstat(self.session, shareID, relativePathCString);
+            if(stat==NULL){
+                if(error){
+                    *error = nil;
+                }
+                result = 0;
+            }
+            else{
+                smb_stat_destroy(stat);
+                if (error) {
+                    resultError = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
+                    *error = resultError;
+                }
+                
+            }
+        }
+    }
+    
+    smb_tree_disconnect(self.session, shareID);
+    
+    return (result==0);
+}
+
+- (NSOperation *)deleteItemAtPath:(NSString *)path success:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
+    [self setupDataQueue];
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    __weak typeof(self) weakSelf = self;
+    __weak NSBlockOperation *weakOperation = operation;
+    id operationBlock = ^{
+        if (weakOperation.cancelled) { return; }
+        NSError *error = nil;
+        BOOL success = [weakSelf deleteItemAtPath:path error:&error];
+        if (weakOperation.cancelled) { return; }
+        if (success==NO) {
+            if (errorHandler) {
+                [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
+            }
+        }
+        else {
+            if (successHandler) {
+                [weakSelf performCallBackWithBlock:^{ successHandler(); }];
+            }
+        }
+    };
+    [operation addExecutionBlock:operationBlock];
+    [self.dataQueue addOperation:operation];
+    return operation;
+}
 
 #pragma mark - Concurrency Management -
 

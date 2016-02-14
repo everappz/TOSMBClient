@@ -35,7 +35,9 @@ typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
     TOSMBSessionErrorCodeShareConnectionFailed = 1004,              /* Connection attempt to a share in the device failed. */
     TOSMBSessionErrorCodeFileNotFound = 1005,                       /* Unable to locate the requested file. */
     TOSMBSessionErrorCodeDirectoryDownloaded = 1006,                /* A directory was attempted to be downloaded. */
-
+    TOSMBSessionErrorCodeUnableToMoveFile = 1007,
+    TOSMBSessionErrorCodeUnableToCreateDirectory = 1008,
+    TOSMBSessionErrorCodeUnableToDeleteItem = 1009,
 };
 
 /** NetBIOS Service Device Types */

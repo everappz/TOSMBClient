@@ -55,7 +55,7 @@
 @property (nonatomic, copy) NSString *destinationFilePath;
 @property (nonatomic, copy) NSString *tempFilePath;
 
-@property (nonatomic, weak, readwrite) TOSMBSession *session;
+@property (nonatomic, weak) TOSMBSession *session;
 @property (nonatomic, strong) TOSMBSessionFile *file;
 @property (assign) smb_session *downloadSession;
 @property (nonatomic, strong) NSBlockOperation *downloadOperation;
@@ -388,7 +388,7 @@
     
     NSString *formattedPath = [self.session filePathExcludingSharePathFromPath:self.sourceFilePath];
     formattedPath = [NSString stringWithFormat:@"\\%@",formattedPath];
-    formattedPath = [formattedPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\\\"];
+    formattedPath = [formattedPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
     
     //Get the file info we'll be working off
     self.file = [self requestFileForItemAtPath:formattedPath inTree:treeID];
