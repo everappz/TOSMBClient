@@ -100,7 +100,10 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 - (void)dealloc
 {
     [self.operationQueue cancelAllOperations];
-    netbios_ns_destroy(self.nameService);
+    if(_nameService!=NULL){
+        netbios_ns_destroy(_nameService);
+        _nameService = NULL;
+    }
 }
 
 #pragma mark - Device Name / IP Resolution -
