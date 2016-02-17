@@ -1,0 +1,3 @@
+[submodule "TOSMBClient/libdsm"]
+	path = TOSMBClient/libdsm
+	url = https://github.com/leshkoapps/libdsm.git
