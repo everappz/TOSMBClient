@@ -208,18 +208,15 @@
     if (self.state != TOSMBSessionTransferTaskStateRunning){
         return;
     }
+    [self.downloadOperation cancel];
+    self.downloadOperation = nil;
     id deleteBlock = ^{
         [[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];
     };
     NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
     [deleteOperation addExecutionBlock:deleteBlock];
-    if(self.downloadOperation){
-        [deleteOperation addDependency:self.downloadOperation];
-    }
     [self.session.transferQueue addOperation:deleteOperation];
-    [self.downloadOperation cancel];
     self.state = TOSMBSessionTransferTaskStateCancelled;
-    self.downloadOperation = nil;
 }
 
 #pragma mark - Feedback Methods -
