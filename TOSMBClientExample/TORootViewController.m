@@ -85,7 +85,7 @@
 
 - (IBAction)cancelButtonTapped:(id)sender
 {
-    if (self.downloadTask.state != TOSMBSessionDownloadTaskStateCancelled) {
+    if (self.downloadTask.state != TOSMBSessionTransferTaskStateCancelled) {
         [self.downloadTask cancel];
         self.cancelButton.enabled = NO;
         self.progressView.progress = 0.0f;
@@ -107,7 +107,7 @@
 
 - (IBAction)suspendButtonTapped:(id)sender
 {
-    if (self.downloadTask.state == TOSMBSessionDownloadTaskStateRunning) {
+    if (self.downloadTask.state == TOSMBSessionTransferTaskStateRunning) {
         [self.downloadTask suspend];
         [self.suspendButton setTitle:@"Resume" forState:UIControlStateNormal];
     }
