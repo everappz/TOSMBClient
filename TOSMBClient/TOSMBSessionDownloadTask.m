@@ -452,7 +452,7 @@
     
     //Perform the file download
     uint64_t bytesRead = 0;
-    NSInteger bufferSize = 65535;
+    NSInteger bufferSize = 32768;
     char *buffer = malloc(bufferSize);
     
     do {
