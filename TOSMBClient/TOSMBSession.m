@@ -400,8 +400,8 @@
     
     if (fileList.count == 0)
         return nil;
-    
-    return fileList;
+
+    return [fileList sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]]];
 }
 
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler{
