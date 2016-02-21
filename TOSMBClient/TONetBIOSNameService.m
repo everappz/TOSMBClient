@@ -130,9 +130,9 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
                          failure:(void (^)(void))failure
 {
     if (name == nil) {
-        if (failure)
+        if (failure){
             failure();
-        
+        }
         return;
     }
     
@@ -142,8 +142,9 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
         //Make sure the queue wasn't cancelled before it even started
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled){
             return;
+        }
         
         NSString *ipAddress = [weakSelf resolveIPAddressWithName:name type:type];
         
@@ -155,7 +156,6 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
             if (failure) {
                 [[NSOperationQueue mainQueue] addOperationWithBlock:^{ failure(); }];
             }
-            
             return;
         }
         
@@ -229,11 +229,10 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 }
 
 #pragma mark - Operation Queue Management -
-- (void)setupOperationQueue
-{
-    if (self.operationQueue)
+- (void)setupOperationQueue{
+    if (self.operationQueue){
         return;
-    
+    }
     self.operationQueue = [[NSOperationQueue alloc] init];
 }
 

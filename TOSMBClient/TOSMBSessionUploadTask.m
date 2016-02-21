@@ -31,9 +31,7 @@
 
 // -------------------------------------------------------------------------
 
-@interface TOSMBSessionUploadTask (){
-   smb_session *_uploadSession;
-}
+@interface TOSMBSessionUploadTask ()
 
 @property (assign, readwrite) TOSMBSessionTransferTaskState state;
 
@@ -42,6 +40,7 @@
 @property (nonatomic, copy) NSString *destinationFilePath;
 
 @property (nonatomic, weak) TOSMBSession *session;
+@property (nonatomic, assign) smb_session *uploadSession;;
 @property (nonatomic, strong) NSBlockOperation *uploadOperation;
 
 @property (assign,readwrite) int64_t countOfBytesSend;
@@ -85,11 +84,11 @@
 }
 
 - (void)dealloc{
-    if(_uploadSession!=NULL){
-        smb_session_destroy(_uploadSession);
-        _uploadSession = NULL;
+    [self.uploadOperation cancel];
+    if(self.uploadSession!=NULL){
+        smb_session_destroy(self.uploadSession);
+        self.uploadSession = NULL;
     }
-    
 }
 
 
@@ -132,7 +131,6 @@
             weakSelf.successHandler(filePath);
         }
     }];
-    
 }
 
 - (void)didFailWithError:(NSError *)error{
@@ -153,14 +151,13 @@
     }];
 }
 
-
 #pragma mark - Uploading -
 
 - (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
     smb_stat fileStat = NULL;
-    if(_uploadSession!=NULL){
-        fileStat = smb_fstat(_uploadSession, treeID, fileCString);
+    if(self.uploadSession!=NULL){
+        fileStat = smb_fstat(self.uploadSession, treeID, fileCString);
     }
     if (fileStat==NULL){
         return nil;
@@ -228,25 +225,25 @@
     //Set up a cleanup block that'll release any handles before cancellation
     void (^cleanup)(void) = ^{
 
-        if (_uploadSession && treeID){
-            smb_file_rm(_uploadSession, treeID, relativeUploadPathCString);
-            smb_tree_disconnect(_uploadSession, treeID);
+        if (self.uploadSession!=NULL && fileID){
+            smb_fclose(self.uploadSession, fileID);
         }
         
-        if (_uploadSession && fileID){
-            smb_fclose(_uploadSession, fileID);
+        if (self.uploadSession!=NULL && treeID){
+            smb_file_rm(self.uploadSession, treeID, relativeUploadPathCString);
+            smb_tree_disconnect(self.uploadSession, treeID);
         }
         
-        if (_uploadSession!=NULL) {
-            smb_session_destroy(_uploadSession);
-            _uploadSession = NULL;
+        if (self.uploadSession!=NULL) {
+            smb_session_destroy(self.uploadSession);
+            self.uploadSession = NULL;
         }
     };
     
     //---------------------------------------------------------------------------------------
     //Connect to SMB device
     
-    _uploadSession = smb_session_new();
+    self.uploadSession = smb_session_new();
     
     //First, check to make sure the file is there, and to acquire its attributes
     NSError *error = [self.session attemptConnectionWithSessionPointer:_uploadSession];
@@ -267,7 +264,7 @@
     //Next attach to the share we'll be using
     NSString *shareName = [self.session shareNameFromPath:self.destinationFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-    treeID = smb_tree_connect(_uploadSession, shareCString);
+    treeID = smb_tree_connect(self.uploadSession, shareCString);
     if (!treeID) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
         cleanup();
@@ -309,7 +306,7 @@
     //---------------------------------------------------------------------------------------
     //Open the file handle
     
-    fileID = smb_fopen(_uploadSession, treeID, relativeUploadPathCString, SMB_MOD_RW);
+    fileID = smb_fopen(self.uploadSession, treeID, relativeUploadPathCString, SMB_MOD_RW);
     if (!fileID) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
         cleanup();
@@ -353,8 +350,8 @@
             void *bytes = (void *)data.bytes;
             while (bytesToWrite > 0) {
                 ssize_t r = -1;
-                if(_uploadSession!=NULL){
-                    r = smb_fwrite(_uploadSession, fileID, bytes, bytesToWrite);
+                if(self.uploadSession!=NULL){
+                    r = smb_fwrite(self.uploadSession, fileID, bytes, bytesToWrite);
                 }
                 
                 if (r == 0){
@@ -391,8 +388,8 @@
     }
     @catch(NSException *exc){}
     
-    if (_uploadSession && fileID){
-        smb_fclose(_uploadSession, fileID);
+    if (self.uploadSession && fileID){
+        smb_fclose(self.uploadSession, fileID);
     }
     
     if (weakOperation.isCancelled) {
@@ -404,23 +401,26 @@
     //Move the finished file to its destination
     
     TOSMBSessionFile *existingFile = [self requestFileForItemAtPath:formattedPath inTree:treeID];
-    if(existingFile){
-        smb_file_rm(_uploadSession, treeID, relativeToPathCString);
+    if(self.uploadSession && existingFile){
+        smb_file_rm(self.uploadSession, treeID, relativeToPathCString);
     }
-
-    int result = smb_file_mv(_uploadSession, treeID, relativeUploadPathCString, relativeToPathCString);
+    int result = -1;
     
-    if(result!=0){
-        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
+    if(self.uploadSession){
+        result = smb_file_mv(self.uploadSession, treeID, relativeUploadPathCString, relativeToPathCString);
     }
     
     self.state =TOSMBSessionTransferTaskStateCompleted;
     
+    cleanup();
+    
     if(result==0){
         [self didSucceedWithFilePath:self.destinationFilePath];
     }
+    else{
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
+    }
 
-    cleanup();
 }
 
 @end

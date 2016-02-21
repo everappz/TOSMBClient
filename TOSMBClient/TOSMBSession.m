@@ -106,31 +106,32 @@
 - (instancetype)init{
     if (self = [super init]) {
         self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
-        _session = smb_session_new();
-        if (_session == NULL)
+        self.session = smb_session_new();
+        if (self.session == NULL){
             return nil;
+        }
     }
     return self;
 }
 
 - (instancetype)initWithHostName:(NSString *)name{
     if (self = [self init]) {
-        _hostName = [name copy];
+        self.hostName = name;
     }
     return self;
 }
 
 - (instancetype)initWithIPAddress:(NSString *)address{
     if (self = [self init]) {
-        _ipAddress = [address copy];
+        self.ipAddress = address;
     }
     return self;
 }
 
 - (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress{
     if (self = [self init]) {
-        _hostName = [name copy];
-        _ipAddress = [ipAddress copy];
+        self.hostName = name;
+        self.ipAddress = ipAddress;
     }
     return self;
 }
@@ -138,10 +139,10 @@
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress{
     if (self = [self init]) {
         if([self isDotQuadIP:hostNameOrIPaddress]){
-            _ipAddress = [hostNameOrIPaddress copy];
+            self.ipAddress = hostNameOrIPaddress;
         }
         else{
-            _hostName = [hostNameOrIPaddress copy];
+            self.hostName = hostNameOrIPaddress;
         }
     }
     return self;
@@ -163,9 +164,11 @@
 }
 
 - (void)dealloc{
-    if(_session!=NULL){
-        smb_session_destroy(_session);
-        _session = NULL;
+    [self.dataQueue cancelAllOperations];
+    [self.transferQueue cancelAllOperations];
+    if(self.session!=NULL){
+        smb_session_destroy(self.session);
+        self.session = NULL;
     }
 }
 
@@ -203,14 +206,18 @@
 
 - (NSError *)attemptConnection{
     NSError *error = [self attemptConnectionWithSessionPointer:self.session];
-    if (error)
+    if (error){
         return error;
-    
+    }
     self.guest = smb_session_is_guest(self.session);
     return nil;
 }
 
 - (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session{
+    
+    if(session==NULL){
+        return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
+    }
     
     //There's no point in attempting a potentially costly TCP attempt if we're not even on a local network.
     if ([self deviceIsOnWiFi] == NO) {
@@ -223,7 +230,6 @@
             self.session = smb_session_new();
             session = self.session;
         }
-        
         self.lastRequestDate = [NSDate date];
     }
     
@@ -306,11 +312,13 @@
     
     //Attempt a connection attempt (If it has not already been done)
     NSError *resultError = [self attemptConnection];
-    if (error && resultError)
+    if (error && resultError){
         *error = resultError;
+    }
     
-    if (resultError)
+    if (resultError){
         return nil;
+    }
     
     //-----------------------------------------------------------------------------
     
@@ -357,7 +365,6 @@
             resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
             *error = resultError;
         }
-        
         return nil;
     }
     
@@ -390,7 +397,9 @@
                     continue;
                 }
                 TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
-                [fileList addObject:file];
+                if(file){
+                    [fileList addObject:file];
+                }
             }
         }
         smb_stat_list_destroy(statList);
@@ -398,15 +407,15 @@
     
     smb_tree_disconnect(self.session, shareID);
     
-    if (fileList.count == 0)
+    if (fileList.count == 0){
         return nil;
+    }
 
     return [fileList sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]]];
 }
 
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler{
     
-    //setup operation queue as needed
     [self setupDataQueue];
     
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
@@ -415,12 +424,12 @@
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         NSError *error = nil;
         NSArray *files = [weakSelf contentsOfDirectoryAtPath:path error:&error];
         
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         if (error) {
             if (errorHandler) {
@@ -468,11 +477,11 @@
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         NSError *error = [weakSelf attemptConnection];
         
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         if (error) {
             if (errorHandler) {
@@ -565,12 +574,12 @@
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         NSError *error = nil;
         TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:path error:&error];
         
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         
         if (error) {
             if (errorHandler) {
@@ -659,10 +668,10 @@
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf moveItemAtPath:fromPath toPath:toPath error:&error];
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         if (success==NO || error) {
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
@@ -746,10 +755,10 @@
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf createDirectoryAtPath:path error:&error];
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         if (success==NO || error) {
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
@@ -1018,10 +1027,10 @@
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
     id operationBlock = ^{
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf deleteItemAtPath:path error:&error];
-        if (weakOperation.cancelled) { return; }
+        if (weakOperation.isCancelled) { return; }
         if (success==NO) {
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
@@ -1066,6 +1075,7 @@
         return;
     }
     self.transferQueue = [[NSOperationQueue alloc] init];
+    self.transferQueue.maxConcurrentOperationCount = 1;
 }
 
 - (void)performCallBackWithBlock:(void(^)(void))block{

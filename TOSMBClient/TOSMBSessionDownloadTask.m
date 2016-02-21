@@ -126,7 +126,11 @@
 }
 
 - (void)dealloc{
-    smb_session_destroy(self.downloadSession);
+    [self.downloadOperation cancel];
+    if(self.downloadSession!=NULL){
+        smb_session_destroy(self.downloadSession);
+        self.downloadSession = NULL;
+    }
 }
 
 #pragma mark - Temporary Destination Methods -
@@ -329,18 +333,21 @@
     void (^cleanup)(void) = ^{
         
         //Release the background task handler, making the app eligible to be suspended now
-        if (self.backgroundTaskIdentifier)
+        if (self.backgroundTaskIdentifier){
             [[UIApplication sharedApplication] endBackgroundTask:self.backgroundTaskIdentifier];
-            
-        if (self.downloadSession && treeID)
-            smb_tree_disconnect(self.downloadSession, treeID);
+        }
         
-        if (self.downloadSession && fileID)
+        if (self.downloadSession && fileID){
             smb_fclose(self.downloadSession, fileID);
+        }
         
-        if (self.downloadSession) {
+        if (self.downloadSession && treeID){
+            smb_tree_disconnect(self.downloadSession, treeID);
+        }
+
+        if (self.downloadSession!=NULL) {
             smb_session_destroy(self.downloadSession);
-            self.downloadSession = nil;
+            self.downloadSession = NULL;
         }
     };
     
@@ -459,12 +466,10 @@
         bytesRead = smb_fread(self.downloadSession, fileID, buffer, bufferSize);
         NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
         [fileHandle writeData:data];
-        
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled){
             break;
-        
+        }
         self.countOfBytesReceived += bytesRead;
-        
         [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
     } while (bytesRead > 0);
     
@@ -486,13 +491,13 @@
     NSString *finalDestinationPath = [self finalFilePathForDownloadedFile];
     [[NSFileManager defaultManager] moveItemAtPath:self.tempFilePath toPath:finalDestinationPath error:nil];
     
-    self.state =TOSMBSessionTransferTaskStateCompleted;
-    
-    //Alert the delegate that we finished, so they may perform any additional cleanup operations
-    [self didSucceedWithFilePath:finalDestinationPath];
+    self.state = TOSMBSessionTransferTaskStateCompleted;
     
     //Perform a final cleanup of all handles and references
     cleanup();
+    
+    //Alert the delegate that we finished, so they may perform any additional cleanup operations
+    [self didSucceedWithFilePath:finalDestinationPath];
 }
 
 @end

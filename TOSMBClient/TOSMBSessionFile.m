@@ -46,11 +46,13 @@
 
 @implementation TOSMBSessionFile
 
-- (instancetype)init{
+- (instancetype)init
+{
     if (self = [super init]) {
         _fileSize = -1;
         _allocationSize = -1;
     }
+    
     return self;
 }
 
@@ -58,7 +60,6 @@
     if (stat == NULL){
         return nil;
     }
-    
     if (self = [self init]) {
         const char *name = smb_stat_name(stat);
         _name = [[[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding] copy];
