@@ -27,11 +27,8 @@
 
 @interface TOSMBSessionFile : NSObject
 
-@property (nonatomic, readonly, strong) TOSMBSession *session;      /** The SMB session of this file entry. */
 @property (nonatomic, readonly, copy) NSString *filePath;         /** The filepath of this file, excluding the share name. */
-
 @property (nonatomic, readonly) BOOL directory;             /** Whether this file is a directory or not */
-
 @property (nonatomic, readonly, copy) NSString *name;             /** The name of the file */
 @property (nonatomic, readonly) uint64_t fileSize;         /** The file size, in bytes of this folder (0 if it's a folder) */
 @property (nonatomic, readonly) uint64_t allocationSize;   /** The allocation size (ie how big it will be on disk) of this file */
@@ -47,7 +44,7 @@
  * @param session The session in which this item belongs to
  * @param path The absolute file path to this file's parent directory. Used to generate this file's own file path.
 */
-- (instancetype)initWithStat:(smb_stat)stat session:(TOSMBSession *)session parentDirectoryFilePath:(NSString *)path;
+- (instancetype)initWithStat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path;
 
 /**
  * Init a new instance representing the share itself, which in the case of libSMD, is simply another directory
@@ -55,8 +52,8 @@
  * @param name The name of the share
  * @param session The session in which this item belongs to
  */
-- (instancetype)initWithShareName:(NSString *)name session:(TOSMBSession *)session;
+- (instancetype)initWithShareName:(NSString *)name ;
 
-- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat session:(TOSMBSession *)session parentDirectoryFilePath:(NSString *)path;
+- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path;
 
 @end

@@ -331,7 +331,7 @@
                 continue;
             
             NSString *shareNameString = [NSString stringWithCString:shareName encoding:NSUTF8StringEncoding];
-            TOSMBSessionFile *share = [[TOSMBSessionFile alloc] initWithShareName:shareNameString session:self];
+            TOSMBSessionFile *share = [[TOSMBSessionFile alloc] initWithShareName:shareNameString];
             [shareList addObject:share];
         }
         
@@ -389,7 +389,7 @@
                 if (name[0] == '.') { //skip hidden files
                     continue;
                 }
-                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item session:self parentDirectoryFilePath:path];
+                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
                 [fileList addObject:file];
             }
         }
@@ -547,7 +547,7 @@
         }
     }
     else{
-        file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat session:self parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
+        file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
         smb_stat_destroy(stat);
     }
     smb_tree_disconnect(self.session, shareID);
@@ -814,7 +814,7 @@
             if([itemName isEqualToString:@"."] || [itemName isEqualToString:@".."]){
                 continue;
             }
-            TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item session:self parentDirectoryFilePath:path];
+            TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
             
             if(items){
                 [*items addObject:file];
