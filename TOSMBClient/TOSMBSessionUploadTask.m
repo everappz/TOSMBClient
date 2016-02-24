@@ -265,7 +265,7 @@
     NSString *shareName = [self.session shareNameFromPath:self.destinationFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     treeID = smb_tree_connect(self.uploadSession, shareCString);
-    if (!treeID) {
+    if (treeID<0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
         cleanup();
         return;
