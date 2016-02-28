@@ -290,13 +290,16 @@
 
 - (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    smb_stat fileStat = smb_fstat(self.downloadSession, treeID, fileCString);
-    if (!fileStat){
-        return nil;
+    if(self.downloadSession!=NULL){
+        smb_stat fileStat = smb_fstat(self.downloadSession, treeID, fileCString);
+        if (fileStat==NULL){
+            return nil;
+        }
+        TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:filePath];
+        smb_stat_destroy(fileStat);
+        return file;
     }
-    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:filePath];
-    smb_stat_destroy(fileStat);
-    return file;
+    return nil;
 }
 
 - (void)setupDownloadOperation{

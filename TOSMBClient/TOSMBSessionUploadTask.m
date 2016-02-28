@@ -40,7 +40,7 @@
 @property (nonatomic, copy) NSString *destinationFilePath;
 
 @property (nonatomic, weak) TOSMBSession *session;
-@property (nonatomic, assign) smb_session *uploadSession;;
+@property (nonatomic, assign) smb_session *uploadSession;
 @property (nonatomic, strong) NSBlockOperation *uploadOperation;
 
 @property (assign,readwrite) int64_t countOfBytesSend;
