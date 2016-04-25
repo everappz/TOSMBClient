@@ -78,7 +78,7 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 
 @property (nonatomic, weak) id<TOSMBSessionDownloadTaskDelegate> delegate;
 
-/** The parent session that is managing this download task. (Retained by this class) */
+/** The parent session that is managing this download task. */
 @property (readonly, weak) TOSMBSession *session;
 
 /** The file path to the target file on the SMB network device. */

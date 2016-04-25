@@ -246,7 +246,7 @@
     self.uploadSession = smb_session_new();
     
     //First, check to make sure the file is there, and to acquire its attributes
-    NSError *error = [self.session attemptConnectionWithSessionPointer:_uploadSession];
+    NSError *error = [self.session attemptConnectionWithSessionPointer:self.uploadSession];
     if (error) {
         [self didFailWithError:error];
         cleanup();
