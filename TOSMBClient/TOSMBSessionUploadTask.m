@@ -24,7 +24,9 @@
 @property (readonly) NSOperationQueue *transferQueue;
 
 - (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session;
+
 - (NSString *)shareNameFromPath:(NSString *)path;
+
 - (NSString *)filePathExcludingSharePathFromPath:(NSString *)path;
 
 @end
