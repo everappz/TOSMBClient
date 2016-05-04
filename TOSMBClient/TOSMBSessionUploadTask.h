@@ -14,7 +14,7 @@
 
 @interface TOSMBSessionUploadTask : NSObject
 
-@property (readonly,weak) TOSMBSession *session;
+@property (readonly,weak) TOSMBSession *sessionObject;
 
 @property (readonly,copy) NSString *sourceFilePath;
 

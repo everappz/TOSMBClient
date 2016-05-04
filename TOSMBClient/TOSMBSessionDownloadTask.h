@@ -79,7 +79,7 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 @property (nonatomic, weak) id<TOSMBSessionDownloadTaskDelegate> delegate;
 
 /** The parent session that is managing this download task. */
-@property (readonly, weak) TOSMBSession *session;
+@property (readonly, weak) TOSMBSession *sessionObject;
 
 /** The file path to the target file on the SMB network device. */
 @property (readonly,copy) NSString *sourceFilePath;
