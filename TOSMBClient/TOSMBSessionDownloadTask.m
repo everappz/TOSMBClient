@@ -308,8 +308,9 @@
     
     NSParameterAssert(self.sessionObject.session);
     
-    if (weakOperation.isCancelled)
+    if (weakOperation.isCancelled || self.sessionObject.session==NULL){
         return;
+    }
     
     smb_tid treeID = -1;
     smb_fd fileID = 0;
@@ -327,9 +328,9 @@
             smb_fclose(self.sessionObject.session, fileID);
         }
         
-        if (self.sessionObject.session && treeID){
-            smb_tree_disconnect(self.sessionObject.session, treeID);
-        }
+        //if (self.sessionObject.session && treeID){
+        //    smb_tree_disconnect(self.sessionObject.session, treeID);
+        //}
 
     };
     
@@ -355,11 +356,18 @@
     //Next attach to the share we'll be using
     NSString *shareName = [self.sessionObject shareNameFromPath:self.sourceFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-    treeID = smb_tree_connect(self.sessionObject.session, shareCString);
+    treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
+    if(treeID<0){
+        treeID = smb_tree_connect(self.sessionObject.session, shareCString);
+    }
     if (treeID<0) {
+        [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
         cleanup();
         return;
+    }
+    else{
+        [self.sessionObject.dsm_session cacheShareID:treeID forName:shareName];
     }
     
     if (weakOperation.isCancelled) {

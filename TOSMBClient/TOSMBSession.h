@@ -23,6 +23,8 @@
 #import <Foundation/Foundation.h>
 #import "TOSMBConstants.h"
 
+extern const NSTimeInterval kSessionTimeout;
+
 @class TOSMBSessionDownloadTask;
 @class TOSMBSessionUploadTask;
 @class TOSMBSessionFile;

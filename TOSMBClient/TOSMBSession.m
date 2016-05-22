@@ -30,6 +30,9 @@
 #import "TOSMBSessionDownloadTask.h"
 #import "TOHost.h"
 #import "TOSMBSessionUploadTask.h"
+#import "TODSMSessionCache.h"
+
+const NSTimeInterval kSessionTimeout = 60.0;
 
 @interface TOSMBSessionDownloadTask ()
 
@@ -74,8 +77,8 @@
 - (instancetype)init{
     if (self = [super init]) {
         self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
-        self.session = smb_session_new();
-        if (self.session == NULL){
+        self.dsm_session = [[TODSMSession alloc] init];
+        if (self.dsm_session == nil){
             return nil;
         }
     }
@@ -133,12 +136,8 @@
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
-    @synchronized(self) {
-        if(self.session!=NULL){
-            smb_session_destroy(self.session);
-            self.session = NULL;
-        }
-    }
+    [[TODSMSessionCache sharedCache] cacheSession:self.dsm_session];
+    self.dsm_session = nil;
 }
 
 #pragma mark - Authorization -
@@ -186,6 +185,22 @@
     }
 }
 
+- (smb_session *)session{
+    return self.dsm_session.smb_session;
+}
+
+- (void)setLastRequestDate:(NSDate *)lastRequestDate{
+    [self.dsm_session setLastRequestDate:lastRequestDate];
+}
+
+- (NSDate *)lastRequestDate{
+    return self.dsm_session.lastRequestDate;
+}
+
+- (void)reloadSession{
+    self.dsm_session = [[TODSMSession alloc] init];
+}
+
 - (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session{
     @synchronized(self) {
         if(session==NULL){
@@ -198,17 +213,17 @@
         }
         
         if (self.session == session) {
-            if (self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > 60.0) {
-                smb_session_destroy(self.session);
-                self.session = smb_session_new();
+            if (self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kSessionTimeout) {
+                [self reloadSession];
                 session = self.session;
             }
             self.lastRequestDate = [NSDate date];
         }
         
         //Don't attempt another connection if we already made it through
-        if (session && smb_session_state(session) >= TOSMBSessionStateDialectOK)
+        if (session && smb_session_state(session) >= TOSMBSessionStateDialectOK){
             return nil;
+        }
         
         //Ensure at least one piece of connection information was supplied
         if (self.ipAddress.length == 0 && self.hostName.length == 0) {
@@ -258,22 +273,41 @@
         inet_aton([self.ipAddress cStringUsingEncoding:NSASCIIStringEncoding], &addr);
         const char *hostName = [self.hostName cStringUsingEncoding:NSUTF8StringEncoding];
         
-        //Attempt a connection
-        if (!smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP)) {
-            return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
-        }
-        
         //If the username or password wasn't supplied, a non-NULL string must still be supplied
         //to avoid NULL input assertions.   
-        const char *userName = (self.userName ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "guest");
-        const char *password = (self.password ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
-        const char *domain = (self.domain ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [self.hostName cStringUsingEncoding:NSUTF8StringEncoding]);
+        const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "guest");
+        const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
+        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : /*[self.hostName cStringUsingEncoding:NSUTF8StringEncoding]*/ "?");
         
+        TODSMSession *cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress domain:[NSString stringWithUTF8String:domain] userName:[NSString stringWithUTF8String:userName] password:[NSString stringWithUTF8String:password]]];
         
-        //Attempt a login. Even if we're downgraded to guest, the login call will succeed
-        smb_session_set_creds(session, domain, userName, password);
-        if (!smb_session_login(session)) {
-            return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
+        if(cachedSession!=nil){
+            self.dsm_session = cachedSession;
+            [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
+            session = self.session;
+            self.lastRequestDate = [NSDate date];
+        }
+        else{
+            
+            self.dsm_session.ipAddress = self.ipAddress;
+            self.dsm_session.domain = [NSString stringWithUTF8String:domain];
+            self.dsm_session.userName = [NSString stringWithUTF8String:userName];
+            self.dsm_session.password = [NSString stringWithUTF8String:password];
+            BOOL success = NO;
+            
+            @synchronized ([TODSMSessionCache sharedCache]) {
+                //Attempt a connection
+                if (!smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP)) {
+                    return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
+                }
+                //Attempt a login. Even if we're downgraded to guest, the login call will succeed
+                smb_session_set_creds(session, domain, userName, password);
+                success = smb_session_login(session);
+            }
+            
+            if (success==NO) {
+                return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
+            }
         }
         return nil;
     }
@@ -334,13 +368,20 @@
         //Connect to that share
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-        smb_tid shareID = smb_tree_connect(self.session, cStringName);
+        smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
+        if(shareID<0){
+            shareID = smb_tree_connect(self.session, cStringName);
+        }
         if (shareID < 0) {
+            [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
                 *error = resultError;
             }
             return nil;
+        }
+        else{
+            [self.dsm_session cacheShareID:shareID forName:shareName];
         }
         
         //work out the remainder of the file path and create the search query
@@ -380,7 +421,7 @@
             smb_stat_list_destroy(statList);
         }
         
-        smb_tree_disconnect(self.session, shareID);
+        //smb_tree_disconnect(self.session, shareID);
         
         if (fileList.count == 0){
             return nil;
@@ -410,6 +451,7 @@
         if (weakOperation.isCancelled) { return; }
         
         if (error) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
@@ -462,6 +504,7 @@
         if (weakOperation.isCancelled) { return; }
         
         if (error) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
@@ -511,13 +554,20 @@
         //Connect to that share
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-        smb_tid shareID = smb_tree_connect(self.session, cStringName);
+        smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
+        if(shareID<0){
+            shareID = smb_tree_connect(self.session, cStringName);
+        }
         if (shareID < 0) {
+            [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
                 *error = resultError;
             }
             return nil;
+        }
+        else{
+            [self.dsm_session cacheShareID:shareID forName:shareName];
         }
         
         //work out the remainder of the file path and create the search query
@@ -539,7 +589,7 @@
             file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
             smb_stat_destroy(stat);
         }
-        smb_tree_disconnect(self.session, shareID);
+        //smb_tree_disconnect(self.session, shareID);
         return file;
         
     }
@@ -564,6 +614,7 @@
         if (weakOperation.isCancelled) { return; }
         
         if (error) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
@@ -612,13 +663,20 @@
         //Connect to that share
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-        smb_tid shareID = smb_tree_connect(self.session, cStringName);
+        smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
+        if(shareID<0){
+            shareID = smb_tree_connect(self.session, cStringName);
+        }
         if (shareID < 0) {
+            [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
                 *error = resultError;
             }
             return NO;
+        }
+        else{
+            [self.dsm_session cacheShareID:shareID forName:shareName];
         }
         
         NSString *relativeFromPath = [self filePathExcludingSharePathFromPath:fromPath];
@@ -641,7 +699,7 @@
             }
         }
         
-        smb_tree_disconnect(self.session, shareID);
+        //smb_tree_disconnect(self.session, shareID);
         
         return (result==0);
         
@@ -659,6 +717,7 @@
         BOOL success = [weakSelf moveItemAtPath:fromPath toPath:toPath error:&error];
         if (weakOperation.isCancelled) { return; }
         if (success==NO || error) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
@@ -708,13 +767,20 @@
         //Connect to that share
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-        smb_tid shareID = smb_tree_connect(self.session, cStringName);
+        smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
+        if(shareID<0){
+            shareID = smb_tree_connect(self.session, cStringName);
+        }
         if (shareID < 0) {
+            [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
                 *error = resultError;
             }
             return NO;
+        }
+        else{
+            [self.dsm_session cacheShareID:shareID forName:shareName];
         }
         
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
@@ -732,7 +798,7 @@
             }
         }
         
-        smb_tree_disconnect(self.session, shareID);
+        //smb_tree_disconnect(self.session, shareID);
         
         return (result==0);
     }
@@ -749,6 +815,7 @@
         BOOL success = [weakSelf createDirectoryAtPath:path error:&error];
         if (weakOperation.isCancelled) { return; }
         if (success==NO || error) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }
@@ -933,13 +1000,20 @@
         //Connect to that share
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-        smb_tid shareID = smb_tree_connect(self.session, cStringName);
+        smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
+        if(shareID<0){
+            shareID = smb_tree_connect(self.session, cStringName);
+        }
         if (shareID < 0) {
+            [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
                 *error = resultError;
             }
             return NO;
+        }
+        else{
+            [self.dsm_session cacheShareID:shareID forName:shareName];
         }
         
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
@@ -1014,7 +1088,7 @@
             }
         }
         
-        smb_tree_disconnect(self.session, shareID);
+        //smb_tree_disconnect(self.session, shareID);
         
         return (result==0);
         
@@ -1032,6 +1106,7 @@
         BOOL success = [weakSelf deleteItemAtPath:path error:&error];
         if (weakOperation.isCancelled) { return; }
         if (success==NO) {
+            [weakSelf reloadSession];
             if (errorHandler) {
                 [weakSelf performCallBackWithBlock:^{ errorHandler(error); }];
             }

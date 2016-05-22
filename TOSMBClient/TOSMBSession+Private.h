@@ -11,19 +11,21 @@
 #import "smb_share.h"
 #import "smb_stat.h"
 #import "smb_dir.h"
+#import "TODSMSession.h"
+
 
 
 @interface TOSMBSession ()
 
 /* The session pointer responsible for this object. */
-@property (nonatomic, assign) smb_session *session;
+@property (nonatomic, strong) TODSMSession *dsm_session;
+@property (nonatomic, readonly, assign) smb_session *session;
+@property (nonatomic, strong) NSDate *lastRequestDate;
 
 /* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, assign, readwrite) NSInteger guest;
 
 @property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests */
-
-@property (nonatomic, strong) NSDate *lastRequestDate;
 
 /* Connection/Authentication handling */
 - (BOOL)deviceIsOnWiFi;
