@@ -78,6 +78,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
     if (self = [super init]) {
         self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
         self.dsm_session = [[TODSMSession alloc] init];
+        self.enableSessionCache = NO;
         if (self.dsm_session == nil){
             return nil;
         }
@@ -136,7 +137,9 @@ const NSTimeInterval kSessionTimeout = 60.0;
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
-    [[TODSMSessionCache sharedCache] cacheSession:self.dsm_session];
+    if(self.enableSessionCache){
+        [[TODSMSessionCache sharedCache] cacheSession:self.dsm_session];
+    }
     self.dsm_session = nil;
 }
 
@@ -256,7 +259,6 @@ const NSTimeInterval kSessionTimeout = 60.0;
             if(self.hostName==nil){
                 self.hostName = [nameService lookupNetworkNameForIPAddress:self.ipAddress];
             }
-            
         }
         
         //If there is STILL no IP address after the resolution, there's no chance of a successful connection
@@ -265,7 +267,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         }
         
         if(self.hostName==nil){
-            self.hostName = @"";
+            self.hostName = @"?";
         }
         
         //Convert the IP Address and hostname values to their C equivalents
@@ -277,13 +279,22 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //to avoid NULL input assertions.   
         const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "guest");
         const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
-        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : /*[self.hostName cStringUsingEncoding:NSUTF8StringEncoding]*/ "?");
+        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [self.hostName cStringUsingEncoding:NSUTF8StringEncoding]);
         
-        TODSMSession *cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress domain:[NSString stringWithUTF8String:domain] userName:[NSString stringWithUTF8String:userName] password:[NSString stringWithUTF8String:password]]];
+        TODSMSession *cachedSession = nil;
         
+        if(self.enableSessionCache){
+            cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress
+                                                                                                         domain:[NSString stringWithUTF8String:domain]
+                                                                                                       userName:[NSString stringWithUTF8String:userName]
+                                                                                                       password:[NSString stringWithUTF8String:password]]];
+        }
+
         if(cachedSession!=nil){
             self.dsm_session = cachedSession;
-            [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
+            if(self.enableSessionCache){
+                [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
+            }
             session = self.session;
             self.lastRequestDate = [NSDate date];
         }
@@ -304,7 +315,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 smb_session_set_creds(session, domain, userName, password);
                 success = smb_session_login(session);
             }
-            
+
             if (success==NO) {
                 return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
             }

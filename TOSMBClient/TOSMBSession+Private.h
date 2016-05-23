@@ -21,6 +21,7 @@
 @property (nonatomic, strong) TODSMSession *dsm_session;
 @property (nonatomic, readonly, assign) smb_session *session;
 @property (nonatomic, strong) NSDate *lastRequestDate;
+@property (nonatomic, assign) BOOL enableSessionCache;
 
 /* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, assign, readwrite) NSInteger guest;
