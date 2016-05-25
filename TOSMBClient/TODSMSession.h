@@ -12,9 +12,9 @@
 
 @interface TODSMSession : NSObject
 
-@property (nonatomic, readonly, assign) smb_session *smb_session;
+@property (nonatomic,readonly,assign) smb_session *smb_session;
 
-@property (nonatomic, strong) NSDate *lastRequestDate;
+@property (nonatomic,strong) NSDate *lastRequestDate;
 
 @property (nonatomic,copy) NSString *userName;
 
@@ -22,7 +22,7 @@
 
 @property (nonatomic,copy) NSString *domain;
 
-@property (nonatomic, copy) NSString *ipAddress;
+@property (nonatomic,copy) NSString *ipAddress;
 
 - (smb_tid)cachedShareIDForName:(NSString *)shareName;
 

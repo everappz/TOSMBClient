@@ -51,8 +51,8 @@
 }
 
 - (void)cacheSession:(TODSMSession *)session{
-    NSParameterAssert(session!=nil);
-    if(session==nil){
+    NSParameterAssert(session!=nil && session.sessionKey!=nil);
+    if(session==nil || session.sessionKey==nil){
         return;
     }
     @synchronized (self) {
@@ -64,8 +64,8 @@
 }
 
 - (void)removeSessionFromCache:(TODSMSession *)session{
-    NSParameterAssert(session!=nil);
-    if(session==nil){
+    NSParameterAssert(session!=nil && session.sessionKey!=nil);
+    if(session==nil || session.sessionKey==nil){
         return;
     }
     @synchronized (self) {

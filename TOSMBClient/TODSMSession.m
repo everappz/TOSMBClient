@@ -15,7 +15,7 @@
 
 @interface TODSMSession()
 
-@property (nonatomic, assign) smb_session *smb_session;
+@property (nonatomic,assign) smb_session *smb_session;
 
 @property (nonatomic,strong) NSMutableDictionary *shares;
 
@@ -69,9 +69,6 @@
         @synchronized (self) {
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
-                if(cachedShareID>0){
-                    smb_tree_disconnect(self.smb_session, cachedShareID);
-                }
                 [self.shares setObject:@(shareID) forKey:shareName];
             }
         }

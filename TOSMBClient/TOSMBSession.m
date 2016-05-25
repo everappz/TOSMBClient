@@ -78,7 +78,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
     if (self = [super init]) {
         self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
         self.dsm_session = [[TODSMSession alloc] init];
-        self.enableSessionCache = NO;
+        self.enableSessionCache = YES;
         if (self.dsm_session == nil){
             return nil;
         }
@@ -267,7 +267,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         }
         
         if(self.hostName==nil){
-            self.hostName = @"?";
+            self.hostName = @"";
         }
         
         //Convert the IP Address and hostname values to their C equivalents
@@ -283,42 +283,41 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         TODSMSession *cachedSession = nil;
         
+        
+        NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
+        NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
+        NSString *dsm_session_password = [NSString stringWithUTF8String:password];
+        
         if(self.enableSessionCache){
-            cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress
-                                                                                                         domain:[NSString stringWithUTF8String:domain]
-                                                                                                       userName:[NSString stringWithUTF8String:userName]
-                                                                                                       password:[NSString stringWithUTF8String:password]]];
+            cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
         }
 
         if(cachedSession!=nil){
             self.dsm_session = cachedSession;
-            if(self.enableSessionCache){
-                [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
-            }
+            [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
             session = self.session;
             self.lastRequestDate = [NSDate date];
         }
         else{
             
             self.dsm_session.ipAddress = self.ipAddress;
-            self.dsm_session.domain = [NSString stringWithUTF8String:domain];
-            self.dsm_session.userName = [NSString stringWithUTF8String:userName];
-            self.dsm_session.password = [NSString stringWithUTF8String:password];
+            self.dsm_session.domain = dsm_session_domain;
+            self.dsm_session.userName = dsm_session_userName;
+            self.dsm_session.password = dsm_session_password;
             BOOL success = NO;
             
-            @synchronized ([TODSMSessionCache sharedCache]) {
-                //Attempt a connection
-                if (!smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP)) {
-                    return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
-                }
-                //Attempt a login. Even if we're downgraded to guest, the login call will succeed
-                smb_session_set_creds(session, domain, userName, password);
-                success = smb_session_login(session);
+            //Attempt a connection
+            if (!smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP)) {
+                return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
             }
+            //Attempt a login. Even if we're downgraded to guest, the login call will succeed
+            smb_session_set_creds(session, domain, userName, password);
+            success = smb_session_login(session);
 
             if (success==NO) {
                 return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
             }
+            
         }
         return nil;
     }
