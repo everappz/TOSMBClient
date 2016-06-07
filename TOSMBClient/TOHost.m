@@ -15,8 +15,6 @@
 #import <net/ethernet.h>
 #import <net/if_dl.h>
 
-
-
 @implementation TOHost
 
 + (NSString *)addressForHostname:(NSString *)hostname {
@@ -31,33 +29,44 @@
     // Get the addresses for the given hostname.
     CFHostRef hostRef = CFHostCreateWithName(kCFAllocatorDefault, (__bridge CFStringRef)hostname);
     BOOL isSuccess = CFHostStartInfoResolution(hostRef, kCFHostAddresses, nil);
-    if (!isSuccess) return nil;
+    if (!isSuccess){
+        CFRelease(hostRef);
+        return nil;
+    }
     CFArrayRef addressesRef = CFHostGetAddressing(hostRef, nil);
-    if (addressesRef == nil) return nil;
+    if (addressesRef == nil){
+        CFRelease(hostRef);
+        return nil;
+    }
     
     // Convert these addresses into strings.
     char ipAddress[INET6_ADDRSTRLEN];
-    NSMutableArray *addresses = [NSMutableArray array];
+    NSMutableArray *addresses = [[NSMutableArray alloc] init];
     CFIndex numAddresses = CFArrayGetCount(addressesRef);
     for (CFIndex currentIndex = 0; currentIndex < numAddresses; currentIndex++) {
         struct sockaddr *address = (struct sockaddr *)CFDataGetBytePtr(CFArrayGetValueAtIndex(addressesRef, currentIndex));
-        if (address == nil) return nil;
+        if (address == nil){
+            CFRelease(hostRef);
+            return nil;
+        };
         getnameinfo(address, address->sa_len, ipAddress, INET6_ADDRSTRLEN, nil, 0, NI_NUMERICHOST);
         NSString *str = [NSString stringWithCString:ipAddress encoding:NSASCIIStringEncoding];
         if(str){
             [addresses addObject:str];
         }
     }
-    
+    CFRelease(hostRef);
     return addresses;
 }
 
 + (NSString *)hostnameForAddress:(NSString *)address {
     NSArray *hostnames = [TOHost hostnamesForAddress:address];
-    if ([hostnames count] > 0)
+    if ([hostnames count] > 0){
         return [hostnames objectAtIndex:0];
-    else
+    }
+    else{
         return nil;
+    }
 }
 
 + (NSArray *)hostnamesForAddress:(NSString *)address {
@@ -70,15 +79,25 @@
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = 0;
     int errorStatus = getaddrinfo([address cStringUsingEncoding:NSASCIIStringEncoding], NULL, &hints, &result);
-    if (errorStatus != 0) return nil;
+    if (errorStatus != 0) {
+        return nil;
+    }
     CFDataRef addressRef = CFDataCreate(NULL, (UInt8 *)result->ai_addr, result->ai_addrlen);
-    if (addressRef == nil) return nil;
+    if (addressRef == nil){
+        return nil;
+    }
     freeaddrinfo(result);
     CFHostRef hostRef = CFHostCreateWithAddress(kCFAllocatorDefault, addressRef);
-    if (hostRef == nil) return nil;
+    if (hostRef == nil) {
+        CFRelease(addressRef);
+        return nil;
+    }
     CFRelease(addressRef);
     BOOL isSuccess = CFHostStartInfoResolution(hostRef, kCFHostNames, NULL);
-    if (!isSuccess) return nil;
+    if (!isSuccess){
+        CFRelease(hostRef);
+        return nil;
+    };
     
     // Get the hostnames for the host reference.
     CFArrayRef hostnamesRef = CFHostGetNames(hostRef, NULL);
@@ -86,7 +105,7 @@
     for (int currentIndex = 0; currentIndex < [(__bridge NSArray *)hostnamesRef count]; currentIndex++) {
         [hostnames addObject:[(__bridge NSArray *)hostnamesRef objectAtIndex:currentIndex]];
     }
-    
+    CFRelease(hostRef);
     return hostnames;
 }
 

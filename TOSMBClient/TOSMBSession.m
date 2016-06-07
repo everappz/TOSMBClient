@@ -295,7 +295,6 @@ const NSTimeInterval kSessionTimeout = 60.0;
         if(cachedSession!=nil){
             self.dsm_session = cachedSession;
             [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
-            session = self.session;
             self.lastRequestDate = [NSDate date];
         }
         else{
