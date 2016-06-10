@@ -426,8 +426,9 @@
     [[NSFileManager defaultManager] createDirectoryAtPath:[self.tempFilePath stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
     
     //Create a new blank file to write to
-    if (self.canBeResumed == NO)
+    if (self.canBeResumed == NO){
         [[NSFileManager defaultManager] createFileAtPath:self.tempFilePath contents:nil attributes:nil];
+    }
     
     //Open a handle to the file and skip ahead if we're resuming
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:self.tempFilePath];
