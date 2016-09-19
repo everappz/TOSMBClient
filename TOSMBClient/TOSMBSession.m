@@ -31,6 +31,7 @@
 #import "TOHost.h"
 #import "TOSMBSessionUploadTask.h"
 #import "TODSMSessionCache.h"
+#import "NSString+LSAdditions.h"
 
 const NSTimeInterval kSessionTimeout = 60.0;
 
@@ -110,7 +111,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress{
     if (self = [self init]) {
-        if([self isDotQuadIP:hostNameOrIPaddress]){
+        if([hostNameOrIPaddress isValidIPAddress]){
             self.ipAddress = hostNameOrIPaddress;
         }
         else{
@@ -118,21 +119,6 @@ const NSTimeInterval kSessionTimeout = 60.0;
         }
     }
     return self;
-}
-
-- (BOOL)isDotQuadIP:(NSString *)hostName{
-    NSArray *a = [hostName componentsSeparatedByString:@"."];
-    if([a count]==4){
-        for(NSString *s in a){
-            NSCharacterSet* nonNumbers = [[NSCharacterSet decimalDigitCharacterSet] invertedSet];
-            NSRange r = [s rangeOfCharacterFromSet: nonNumbers];
-            if(r.location != NSNotFound){
-                return NO;
-            }
-        }
-        return YES;
-    }
-    return NO;
 }
 
 - (void)dealloc{
@@ -238,14 +224,14 @@ const NSTimeInterval kSessionTimeout = 60.0;
             
             if(self.ipAddress == nil){
                 NSArray *addresses = [TOHost addressesForHostname:self.hostName];
-                NSString *ipv4Address = nil;
+                NSString *ipAddress = nil;
                 for(NSString *address in addresses){
-                    if([self isDotQuadIP:address]){
-                        ipv4Address = address;
+                    if([address isValidIPAddress]){
+                        ipAddress = address;
                         break;
                     }
                 }
-                self.ipAddress = ipv4Address;
+                self.ipAddress = ipAddress;
             }
             
             if(self.hostName==nil){

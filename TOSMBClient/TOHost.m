@@ -14,6 +14,12 @@
 #import <arpa/inet.h>
 #import <net/ethernet.h>
 #import <net/if_dl.h>
+#import <SystemConfiguration/SystemConfiguration.h>
+#import <arpa/inet.h>
+#import <net/if.h>
+#import <unistd.h>
+#import <dlfcn.h>
+
 
 @implementation TOHost
 
@@ -161,5 +167,170 @@
     freeifaddrs(interfaces);
     return addresses;
 }
+
+
+
+
+#pragma mark Class IP and Host Utilities
+// This IP Utilities are mostly inspired by or derived from Apple code. Thank you Apple.
+
++ (NSString *) stringFromAddress: (const struct sockaddr *) address
+{
+    if (address && address->sa_family == AF_INET)
+    {
+        const struct sockaddr_in* sin = (struct sockaddr_in *) address;
+        return [NSString stringWithFormat:@"%@:%d", [NSString stringWithUTF8String:inet_ntoa(sin->sin_addr)], ntohs(sin->sin_port)];
+    }
+    
+    return nil;
+}
+
++ (BOOL)addressFromString:(NSString *)IPAddress address:(struct sockaddr_in *)address
+{
+    if (!IPAddress || ![IPAddress length]) return NO;
+    
+    memset((char *) address, sizeof(struct sockaddr_in), 0);
+    address->sin_family = AF_INET;
+    address->sin_len = sizeof(struct sockaddr_in);
+    
+    int conversionResult = inet_aton([IPAddress UTF8String], &address->sin_addr);
+    if (conversionResult == 0)
+    {
+        NSAssert1(conversionResult != 1, @"Failed to convert the IP address string into a sockaddr_in: %@", IPAddress);
+        return NO;
+    }
+    
+    return YES;
+}
+
++ (NSString *) addressFromData:(NSData *) addressData
+{
+    NSString *adr = nil;
+    
+    if (addressData != nil)
+    {
+        struct sockaddr_in addrIn = *(struct sockaddr_in *)[addressData bytes];
+        adr = [NSString stringWithFormat: @"%s", inet_ntoa(addrIn.sin_addr)];
+    }
+    
+    return adr;
+}
+
++ (NSString *) portFromData:(NSData *) addressData
+{
+    NSString *port = nil;
+    
+    if (addressData != nil)
+    {
+        struct sockaddr_in addrIn = *(struct sockaddr_in *)[addressData bytes];
+        port = [NSString stringWithFormat: @"%s", ntohs(addrIn.sin_port)];
+    }
+    
+    return port;
+}
+
++ (NSData *) dataFromAddress: (struct sockaddr_in) address
+{
+    return [NSData dataWithBytes:&address length:sizeof(struct sockaddr_in)];
+}
+
+- (NSString *) hostname
+{
+    char baseHostName[256]; // Thanks, Gunnar Larisch
+    int success = gethostname(baseHostName, 255);
+    if (success != 0) return nil;
+    baseHostName[255] = '\0';
+    
+#if TARGET_IPHONE_SIMULATOR
+    return [NSString stringWithFormat:@"%s", baseHostName];
+#else
+    return [NSString stringWithFormat:@"%s.local", baseHostName];
+#endif
+}
+
+- (NSString *) getIPAddressForHost: (NSString *) theHost
+{
+    struct hostent *host = gethostbyname([theHost UTF8String]);
+    if (!host) {herror("resolv"); return NULL; }
+    struct in_addr **list = (struct in_addr **)host->h_addr_list;
+    NSString *addressString = [NSString stringWithCString:inet_ntoa(*list[0]) encoding:NSUTF8StringEncoding];
+    return addressString;
+}
+
+- (NSString *) localIPAddress
+{
+    struct hostent *host = gethostbyname([[self hostname] UTF8String]);
+    if (!host) {herror("resolv"); return nil;}
+    struct in_addr **list = (struct in_addr **)host->h_addr_list;
+    return [NSString stringWithCString:inet_ntoa(*list[0]) encoding:NSUTF8StringEncoding];
+}
+
+// Matt Brown's get WiFi IP addy solution
+// Author gave permission to use in Cookbook under cookbook license
+// http://mattbsoftware.blogspot.com/2009/04/how-to-get-ip-address-of-iphone-os-v221.html
+// Updates: changed en0 to en.
+// More updates: TBD
+- (NSString *) localWiFiIPAddress
+{
+    BOOL success;
+    struct ifaddrs * addrs;
+    const struct ifaddrs * cursor;
+    
+    success = getifaddrs(&addrs) == 0;
+    if (success) {
+        cursor = addrs;
+        while (cursor != NULL) {
+            // the second test keeps from picking up the loopback address
+            if (cursor->ifa_addr->sa_family == AF_INET && (cursor->ifa_flags & IFF_LOOPBACK) == 0)
+            {
+                NSString *name = [NSString stringWithUTF8String:cursor->ifa_name];
+                if ([name isEqualToString:@"en"])  // Wi-Fi adapter -- was en0
+                    return [NSString stringWithUTF8String:inet_ntoa(((struct sockaddr_in *)cursor->ifa_addr)->sin_addr)];
+            }
+            cursor = cursor->ifa_next;
+        }
+        freeifaddrs(addrs);
+    }
+    return nil;
+}
+
++ (NSArray *) localWiFiIPAddresses
+{
+    BOOL success;
+    struct ifaddrs * addrs;
+    const struct ifaddrs * cursor;
+    
+    NSMutableArray *array = [NSMutableArray array];
+    
+    success = getifaddrs(&addrs) == 0;
+    if (success) {
+        cursor = addrs;
+        while (cursor != NULL) {
+            // the second test keeps from picking up the loopback address
+            if (cursor->ifa_addr->sa_family == AF_INET && (cursor->ifa_flags & IFF_LOOPBACK) == 0)
+            {
+                NSString *name = [NSString stringWithUTF8String:cursor->ifa_name];
+                if ([name hasPrefix:@"en"])
+                    [array addObject:[NSString stringWithUTF8String:inet_ntoa(((struct sockaddr_in *)cursor->ifa_addr)->sin_addr)]];
+            }
+            cursor = cursor->ifa_next;
+        }
+        freeifaddrs(addrs);
+    }
+    
+    if (array.count) return array;
+    
+    return nil;
+}
+
+
+- (NSString *) whatismyipdotcom
+{
+    NSError *error;
+    NSURL *ipURL = [NSURL URLWithString:@"http://www.whatismyip.com/automation/n09230945.asp"];
+    NSString *ip = [NSString stringWithContentsOfURL:ipURL encoding:1 error:&error];
+    return ip ? ip : [error localizedDescription];
+}
+
 
 @end

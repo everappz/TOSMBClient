@@ -22,4 +22,27 @@
 
 + (NSArray *)ethernetAddresses ;
 
+
+#pragma mark Class IP and Host Utilities
+
++ (NSString *) stringFromAddress: (const struct sockaddr *) address;
+
++ (BOOL)addressFromString:(NSString *)IPAddress address:(struct sockaddr_in *)address;
+
++ (NSString *) addressFromData:(NSData *) addressData;
+
++ (NSString *) portFromData:(NSData *) addressData;
+
++ (NSData *) dataFromAddress: (struct sockaddr_in) address;
+
+- (NSString *) hostname;
+
+- (NSString *) getIPAddressForHost: (NSString *) theHost;
+
+- (NSString *) localIPAddress;
+- (NSString *) localWiFiIPAddress;
++ (NSArray *) localWiFiIPAddresses;
+
+- (NSString *) whatismyipdotcom;
+
 @end
