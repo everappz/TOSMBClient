@@ -8,20 +8,26 @@
 
 #import <Foundation/Foundation.h>
 
+
 @interface TOHost : NSObject
 
-+ (NSString *)addressForHostname:(NSString *)hostname ;
++ (NSString *)addressForHostname:(NSString *)hostname;
 
-+ (NSArray *)addressesForHostname:(NSString *)hostname ;
++ (NSArray *)addressesForHostname:(NSString *)hostname;
 
-+ (NSString *)hostnameForAddress:(NSString *)address ;
++ (NSString *)hostnameForAddress:(NSString *)address;
 
-+ (NSArray *)hostnamesForAddress:(NSString *)address ;
++ (NSArray *)hostnamesForAddress:(NSString *)address;
 
-+ (NSArray *)ipAddresses ;
++ (NSArray *)ipAddresses;
 
-+ (NSArray *)ethernetAddresses ;
++ (NSArray *)ethernetAddresses;
 
++ (BOOL)isValidIPv4Address:(NSString *)addressString;
+
++ (BOOL)isValidIPv6Address:(NSString *)addressString;
+
++ (BOOL)isValidIPAddress:(NSString *)addressString;
 
 #pragma mark Class IP and Host Utilities
 

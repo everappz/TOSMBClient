@@ -226,7 +226,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 NSArray *addresses = [TOHost addressesForHostname:self.hostName];
                 NSString *ipAddress = nil;
                 for(NSString *address in addresses){
-                    if([address isValidIPAddress]){
+                    if([TOHost isValidIPv4Address:address]){
                         ipAddress = address;
                         break;
                     }
@@ -259,6 +259,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //Convert the IP Address and hostname values to their C equivalents
         struct in_addr addr;
         inet_aton([self.ipAddress cStringUsingEncoding:NSASCIIStringEncoding], &addr);
+        
         const char *hostName = [self.hostName cStringUsingEncoding:NSUTF8StringEncoding];
         
         //If the username or password wasn't supplied, a non-NULL string must still be supplied

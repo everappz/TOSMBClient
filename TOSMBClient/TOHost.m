@@ -19,7 +19,7 @@
 #import <net/if.h>
 #import <unistd.h>
 #import <dlfcn.h>
-
+#import <arpa/inet.h>
 
 @implementation TOHost
 
@@ -169,6 +169,25 @@
 }
 
 
+// These methods adapted from code posted by Evan Schoenberg to Stack Overflow
+// and licensed under the Attribution-ShareAlike 3.0 Unported license
+// http://stackoverflow.com/questions/1679152/how-to-validate-an-ip-address-with-regular-expression-in-objective-c
+
++ (BOOL)isValidIPv4Address:(NSString *)addressString{
+    struct in_addr throwaway;
+    int success = inet_pton(AF_INET, [addressString UTF8String], &throwaway);
+    return (success == 1);
+}
+
++ (BOOL)isValidIPv6Address:(NSString *)addressString{
+    struct in6_addr throwaway;
+    int success = inet_pton(AF_INET6, [addressString UTF8String], &throwaway);
+    return (success == 1);
+}
+
++ (BOOL)isValidIPAddress:(NSString *)addressString{
+    return ([self isValidIPv4Address:addressString] || [self isValidIPv6Address:addressString]);
+}
 
 
 #pragma mark Class IP and Host Utilities
@@ -223,7 +242,7 @@
     if (addressData != nil)
     {
         struct sockaddr_in addrIn = *(struct sockaddr_in *)[addressData bytes];
-        port = [NSString stringWithFormat: @"%s", ntohs(addrIn.sin_port)];
+        port = [NSString stringWithFormat: @"%hu", ntohs(addrIn.sin_port)];
     }
     
     return port;
