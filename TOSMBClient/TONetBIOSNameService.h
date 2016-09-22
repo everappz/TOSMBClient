@@ -1,6 +1,6 @@
 //
 // TONetBIOSNameService.h
-// Copyright 2015 Timothy Oliver
+// Copyright 2015-2016 Timothy Oliver
 //
 // This file is dual-licensed under both the MIT License, and the LGPL v2.1 License.
 //
@@ -21,8 +21,6 @@
 // -------------------------------------------------------------------------------
 
 #import <Foundation/Foundation.h>
-#import "TOSMBConstants.h"
-
 
 @class TONetBIOSNameServiceEntry;
 
@@ -34,7 +32,8 @@ typedef void (^TONetBIOSNameServiceDiscoveryEvent)(TONetBIOSNameServiceEntry *en
 
 @interface TONetBIOSNameService : NSObject
 
-@property (nonatomic, readonly) BOOL discovering; /** True when device discovery has been started */
+/** True when device discovery has been started */
+@property (nonatomic, readonly) BOOL discovering;
 
 // -------------------------------------------------------------------------------
 

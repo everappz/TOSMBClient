@@ -1,6 +1,6 @@
 //
 // TONetBIOSNameService.m
-// Copyright 2015 Timothy Oliver
+// Copyright 2015-2016 Timothy Oliver
 //
 // This file is dual-licensed under both the MIT License, and the LGPL v2.1 License.
 //
@@ -29,7 +29,7 @@
 #import "netbios_ns.h"
 #import "netbios_defs.h"
 
-const NSTimeInterval kTONetBIOSNameServiceDiscoveryTimeOut = 10.0f;
+const NSTimeInterval kTONetBIOSNameServiceDiscoveryTimeOut = 4.0f;
 
 #pragma mark - Class Private Interface -
 @interface TONetBIOSNameService ()
@@ -55,13 +55,16 @@ const NSTimeInterval kTONetBIOSNameServiceDiscoveryTimeOut = 10.0f;
 static void on_entry_added(void *p_opaque, netbios_ns_entry *entry)
 {
     @autoreleasepool {
-        TONetBIOSNameService *funcSelf = (__bridge TONetBIOSNameService *)(p_opaque);
-        if (funcSelf.discoveryAddedEvent == nil)
+        __weak TONetBIOSNameService *funcSelf = (__bridge TONetBIOSNameService *)(p_opaque);
+        if (funcSelf.discoveryAddedEvent == nil) {
             return;
+        }
         
         TONetBIOSNameServiceEntry *entryObject = [TONetBIOSNameServiceEntry entryWithCEntry:entry];
         dispatch_async(dispatch_get_main_queue(), ^{
-            funcSelf.discoveryAddedEvent(entryObject);
+            if ([funcSelf respondsToSelector:@selector(discoveryAddedEvent)] && funcSelf.discoveryAddedEvent) {
+                funcSelf.discoveryAddedEvent(entryObject);
+            }
         });
     }
 }
@@ -69,13 +72,16 @@ static void on_entry_added(void *p_opaque, netbios_ns_entry *entry)
 static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 {
     @autoreleasepool {
-        TONetBIOSNameService *funcSelf = (__bridge TONetBIOSNameService *)(p_opaque);
-        if (funcSelf.discoveryRemovedEvent == nil)
+        __weak TONetBIOSNameService *funcSelf = (__bridge TONetBIOSNameService *)(p_opaque);
+        if (funcSelf.discoveryRemovedEvent == nil) {
             return;
+        }
         
         TONetBIOSNameServiceEntry *entryObject = [TONetBIOSNameServiceEntry entryWithCEntry:entry];
         dispatch_async(dispatch_get_main_queue(), ^{
-            funcSelf.discoveryRemovedEvent(entryObject);
+            if ([funcSelf respondsToSelector:@selector(discoveryRemovedEvent)] && funcSelf.discoveryRemovedEvent) {
+                funcSelf.discoveryRemovedEvent(entryObject);
+            }
         });
     }
 }
@@ -100,10 +106,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 - (void)dealloc
 {
     [self.operationQueue cancelAllOperations];
-    if(_nameService!=NULL){
-        netbios_ns_destroy(_nameService);
-        _nameService = NULL;
-    }
+    netbios_ns_destroy(self.nameService);
 }
 
 #pragma mark - Device Name / IP Resolution -
@@ -114,7 +117,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     
     struct in_addr addr;
     int result = netbios_ns_resolve(self.nameService, [name cStringUsingEncoding:NSUTF8StringEncoding], TONetBIOSNameServiceCTypeForType(type), &addr.s_addr);
-    if (result == 0)
+    if (result < 0)
         return nil;
     
     char *ipAddress = inet_ntoa(addr);
@@ -130,9 +133,9 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
                          failure:(void (^)(void))failure
 {
     if (name == nil) {
-        if (failure){
+        if (failure)
             failure();
-        }
+        
         return;
     }
     
@@ -142,9 +145,8 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
         //Make sure the queue wasn't cancelled before it even started
-        if (weakOperation.isCancelled){
+        if (weakOperation.isCancelled)
             return;
-        }
         
         NSString *ipAddress = [weakSelf resolveIPAddressWithName:name type:type];
         
@@ -156,6 +158,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
             if (failure) {
                 [[NSOperationQueue mainQueue] addOperationWithBlock:^{ failure(); }];
             }
+            
             return;
         }
         
@@ -229,10 +232,11 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 }
 
 #pragma mark - Operation Queue Management -
-- (void)setupOperationQueue{
-    if (self.operationQueue){
+- (void)setupOperationQueue
+{
+    if (self.operationQueue)
         return;
-    }
+    
     self.operationQueue = [[NSOperationQueue alloc] init];
 }
 
