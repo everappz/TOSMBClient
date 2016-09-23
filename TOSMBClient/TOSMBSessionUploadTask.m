@@ -242,7 +242,7 @@
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
     if(treeID<0){
-        treeID = smb_tree_connect(self.sessionObject.session, shareCString);
+        smb_tree_connect(self.sessionObject.session, shareCString,&treeID);
     }
     if (treeID<0) {
         [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
@@ -289,7 +289,7 @@
     //---------------------------------------------------------------------------------------
     //Open the file handle
     
-    fileID = smb_fopen(self.sessionObject.session, treeID, relativeUploadPathCString, SMB_MOD_RW);
+    smb_fopen(self.sessionObject.session, treeID, relativeUploadPathCString, SMB_MOD_RW,&fileID);
     if (!fileID) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
         cleanup();

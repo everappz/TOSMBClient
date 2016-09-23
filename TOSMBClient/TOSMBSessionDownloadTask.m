@@ -206,6 +206,17 @@
 
 #pragma mark - Feedback Methods -
 
+#pragma mark - Private Control Methods -
+- (void)fail
+{
+    if (self.state != TOSMBSessionTransferTaskStateRunning)
+        return;
+    
+    [self cancel];
+    
+    self.state = TOSMBSessionTransferTaskStateFailed;
+}
+
 - (BOOL)canBeResumed{
     if ([[NSFileManager defaultManager] fileExistsAtPath:self.tempFilePath] == NO){
         return NO;
@@ -322,6 +333,7 @@
         //Release the background task handler, making the app eligible to be suspended now
         if (self.backgroundTaskIdentifier){
             [[UIApplication sharedApplication] endBackgroundTask:self.backgroundTaskIdentifier];
+            self.backgroundTaskIdentifier = 0;
         }
         
         if (self.sessionObject.session && fileID){
@@ -359,7 +371,11 @@
     treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
 
     if(treeID<0){
+<<<<<<< HEAD
         smb_tree_connect(self.sessionObject.dsm_session, shareCString, &treeID);
+=======
+        smb_tree_connect(self.sessionObject.session, shareCString, &treeID);
+>>>>>>> c3d4654573eca344b84f26b7e7cb4e1bd496109a
     }
     if (treeID<0) {
         [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
@@ -370,6 +386,7 @@
     else{
         [self.sessionObject.dsm_session cacheShareID:treeID forName:shareName];
     }
+    
     
     if (weakOperation.isCancelled) {
         cleanup();
@@ -407,7 +424,7 @@
     //---------------------------------------------------------------------------------------
     //Open the file handle
     
-    fileID = smb_fopen(self.sessionObject.session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO);
+    smb_fopen(self.sessionObject.session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
     if (!fileID) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
         cleanup();
@@ -448,19 +465,35 @@
     }
     
     //Perform the file download
-    uint64_t bytesRead = 0;
+    int64_t bytesRead = 0;
     NSInteger bufferSize = 32768;
     char *buffer = malloc(bufferSize);
     
     do {
-        bytesRead = smb_fread(self.sessionObject.session, fileID, buffer, bufferSize);
-        NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
-        [fileHandle writeData:data];
-        if (weakOperation.isCancelled){
-            break;
+        @autoreleasepool {
+            bytesRead = smb_fread(self.sessionObject.session, fileID, buffer, bufferSize);
+            
+            if (bytesRead < 0) {
+                [self fail];
+                [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
+                break;
+            }
+
+            
+            //Save them to the file handle (And ensure the NSData object is flushed immediately)
+            NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
+            [fileHandle writeData:data];
+            
+            
+            //Ensure the data is properly written to disk before proceeding
+            [fileHandle synchronizeFile];
+            
+            if (weakOperation.isCancelled){
+                break;
+            }
+            self.countOfBytesReceived += bytesRead;
+            [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
         }
-        self.countOfBytesReceived += bytesRead;
-        [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
     } while (bytesRead > 0);
     
     //Set the modification date to match the one on the SMB device so we can compare the two at a later date
@@ -469,7 +502,7 @@
     free(buffer);
     [fileHandle closeFile];
     
-    if (weakOperation.isCancelled) {
+    if (weakOperation.isCancelled  || self.state != TOSMBSessionTransferTaskStateRunning) {
         cleanup();
         return;
     }

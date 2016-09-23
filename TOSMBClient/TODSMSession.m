@@ -19,7 +19,6 @@
 
 @property (nonatomic,strong) NSMutableDictionary *shares;
 
-
 @end
 
 
@@ -85,7 +84,7 @@
 }
 
 - (BOOL)isValid{
-    BOOL b = (self.smb_session !=NULL  && smb_session_state(self.smb_session) >= TOSMBSessionStateDialectOK && (NSDate.date.timeIntervalSince1970-self.lastRequestDate.timeIntervalSince1970)<kSessionTimeout && self.ipAddress.length>0 && self.userName.length>0);
+    BOOL b = (self.smb_session !=NULL  && smb_session_is_guest(self.smb_session) >= 0 && (NSDate.date.timeIntervalSince1970-self.lastRequestDate.timeIntervalSince1970)<kSessionTimeout && self.ipAddress.length>0 && self.userName.length>0);
     return b;
 }
 

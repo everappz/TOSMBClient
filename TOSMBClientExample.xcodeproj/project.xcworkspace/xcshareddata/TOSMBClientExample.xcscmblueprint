@@ -1,0 +1,30 @@
+{
+  "DVTSourceControlWorkspaceBlueprintPrimaryRemoteRepositoryKey" : "BAA428024A28FF1B10B975069015519D5CEE4DB6",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyRepositoryLocationsKey" : {
+
+  },
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyStatesKey" : {
+    "BAA428024A28FF1B10B975069015519D5CEE4DB6" : 9223372036854775807,
+    "A5BF903B41F34D3DCE1237C6AD44B520272A9268" : 9223372036854775807
+  },
+  "DVTSourceControlWorkspaceBlueprintIdentifierKey" : "500E9819-3027-452E-B804-0C6DB076D868",
+  "DVTSourceControlWorkspaceBlueprintWorkingCopyPathsKey" : {
+    "BAA428024A28FF1B10B975069015519D5CEE4DB6" : "TOSMBClient\/",
+    "A5BF903B41F34D3DCE1237C6AD44B520272A9268" : "TOSMBClient\/TOSMBClient\/libdsm\/"
+  },
+  "DVTSourceControlWorkspaceBlueprintNameKey" : "TOSMBClientExample",
+  "DVTSourceControlWorkspaceBlueprintVersion" : 204,
+  "DVTSourceControlWorkspaceBlueprintRelativePathToProjectKey" : "TOSMBClientExample.xcodeproj",
+  "DVTSourceControlWorkspaceBlueprintRemoteRepositoriesKey" : [
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/leshkoapps\/libdsm.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "A5BF903B41F34D3DCE1237C6AD44B520272A9268"
+    },
+    {
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryURLKey" : "https:\/\/github.com\/leshkoapps\/TOSMBClient.git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositorySystemKey" : "com.apple.dt.Xcode.sourcecontrol.Git",
+      "DVTSourceControlWorkspaceBlueprintRemoteRepositoryIdentifierKey" : "BAA428024A28FF1B10B975069015519D5CEE4DB6"
+    }
+  ]
+}

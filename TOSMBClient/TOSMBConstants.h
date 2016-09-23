@@ -35,11 +35,14 @@ typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
     TOSMBSessionErrorCodeShareConnectionFailed = 1004,              /* Connection attempt to a share in the device failed. */
     TOSMBSessionErrorCodeFileNotFound = 1005,                       /* Unable to locate the requested file. */
     TOSMBSessionErrorCodeDirectoryDownloaded = 1006,                /* A directory was attempted to be downloaded. */
-    TOSMBSessionErrorCodeUnableToMoveFile = 1007,
-    TOSMBSessionErrorCodeUnableToCreateDirectory = 1008,
-    TOSMBSessionErrorCodeUnableToDeleteItem = 1009,
-    TOSMBSessionErrorCodeDirectoryUploaded = 1010,
-    TOSMBSessionErrorCodeFailToUpload = 1011,
+    
+    TOSMBSessionErrorCodeFileDownloadFailed = 1007,                /* The file could not be downloaded, possible network error. */
+    
+    TOSMBSessionErrorCodeUnableToMoveFile,
+    TOSMBSessionErrorCodeUnableToCreateDirectory,
+    TOSMBSessionErrorCodeUnableToDeleteItem,
+    TOSMBSessionErrorCodeDirectoryUploaded,
+    TOSMBSessionErrorCodeFailToUpload,
 };
 
 /** NetBIOS Service Device Types */
@@ -50,21 +53,14 @@ typedef NS_ENUM(NSInteger, TONetBIOSNameServiceType) {
     TONetBIOSNameServiceTypeDomainMaster
 };
 
-/** SMB Session Connection States */
-typedef NS_ENUM(NSInteger, TOSMBSessionState) {
-    TOSMBSessionStateError = SMB_STATE_ERROR,
-    TOSMBSessionStateNetBIOSOK = SMB_STATE_NEW,
-    TOSMBSessionStateDialectOK = SMB_STATE_NETBIOS_OK,
-    TOSMBSessionStateSessionOK = SMB_STATE_SESSION_OK
-};
-
 /** SMB File Download Connection State */
 typedef NS_ENUM(NSInteger, TOSMBSessionTransferTaskState) {
     TOSMBSessionTransferTaskStateReady,
     TOSMBSessionTransferTaskStateRunning,
     TOSMBSessionTransferTaskStateSuspended,
     TOSMBSessionTransferTaskStateCancelled,
-    TOSMBSessionTransferTaskStateCompleted
+    TOSMBSessionTransferTaskStateCompleted,
+    TOSMBSessionTransferTaskStateFailed
 };
 
 extern TONetBIOSNameServiceType TONetBIOSNameServiceTypeForCType(char type);

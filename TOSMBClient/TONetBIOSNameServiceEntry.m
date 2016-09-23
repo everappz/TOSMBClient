@@ -1,6 +1,6 @@
 //
 // TONetBIOSNameServiceEntry.m
-// Copyright 2015 Timothy Oliver
+// Copyright 2015-2016 Timothy Oliver
 //
 // This file is dual-licensed under both the MIT License, and the LGPL v2.1 License.
 //
@@ -29,11 +29,11 @@
 @interface TONetBIOSNameServiceEntry ()
 
 @property (nonatomic, assign) netbios_ns_entry *entry;
-@property (nonatomic, copy) NSString *name;
-@property (nonatomic, copy) NSString *group;
-@property (nonatomic, assign) TONetBIOSNameServiceType type;
-@property (nonatomic, assign) uint32_t ipAddress;
-@property (nonatomic, copy) NSString *ipAddressString;
+@property (nonatomic, copy, readwrite) NSString *name;
+@property (nonatomic, copy, readwrite) NSString *group;
+@property (nonatomic, assign, readwrite) TONetBIOSNameServiceType type;
+@property (nonatomic, assign, readwrite) uint32_t ipAddress;
+@property (nonatomic, copy, readwrite) NSString *ipAddressString;
 
 - (BOOL)isEqualToEntry:(TONetBIOSNameServiceEntry *)entry;
 
@@ -49,8 +49,8 @@
     
     if (self = [super init]) {
         _entry = entry;
-        _name = [[NSString stringWithCString:netbios_ns_entry_name(_entry) encoding:NSUTF8StringEncoding] copy];
-        _group = [[NSString stringWithCString:netbios_ns_entry_group(_entry) encoding:NSUTF8StringEncoding] copy];
+        _name = [NSString stringWithCString:netbios_ns_entry_name(_entry) encoding:NSUTF8StringEncoding];
+        _group = [NSString stringWithCString:netbios_ns_entry_group(_entry) encoding:NSUTF8StringEncoding];
         _type = TONetBIOSNameServiceTypeForCType(netbios_ns_entry_type(_entry));
         _ipAddress = netbios_ns_entry_ip(entry);
     }

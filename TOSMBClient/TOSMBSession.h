@@ -39,8 +39,9 @@ extern const NSTimeInterval kSessionTimeout;
 @property (nonatomic, copy) NSString *password;
 @property (nonatomic, copy) NSString *domain;
 
-@property (nonatomic, readonly) TOSMBSessionState state;
 @property (nonatomic, readonly,getter=isConnected) BOOL connected;
+
+/* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, readonly) NSInteger guest;
 
 /** 
