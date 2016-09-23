@@ -371,11 +371,7 @@
     treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
 
     if(treeID<0){
-<<<<<<< HEAD
-        smb_tree_connect(self.sessionObject.dsm_session, shareCString, &treeID);
-=======
-        smb_tree_connect(self.sessionObject.session, shareCString, &treeID);
->>>>>>> c3d4654573eca344b84f26b7e7cb4e1bd496109a
+        smb_tree_connect((__bridge smb_session *)(self.sessionObject.dsm_session), shareCString, &treeID);
     }
     if (treeID<0) {
         [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
