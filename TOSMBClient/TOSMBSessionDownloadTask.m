@@ -369,8 +369,9 @@
     NSString *shareName = [self.sessionObject shareNameFromPath:self.sourceFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
+
     if(treeID<0){
-        smb_tree_connect(self.sessionObject.session, shareCString, &treeID);
+        smb_tree_connect((__bridge smb_session *)(self.sessionObject.dsm_session), shareCString, &treeID);
     }
     if (treeID<0) {
         [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
