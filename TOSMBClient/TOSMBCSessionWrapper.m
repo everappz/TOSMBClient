@@ -1,19 +1,19 @@
 //
-//  TODSMSession.m
+//  TOSMBCSessionWrapper.m
 //  MyApp
 //
 //  Created by Artem Meleshko on 5/22/16.
 //  Copyright © 2016 My Company. All rights reserved.
 //
 
-#import "TODSMSession.h"
+#import "TOSMBCSessionWrapper.h"
 #import "TOSMBSession.h"
 #import "smb_share.h"
 #import "smb_stat.h"
 #import "smb_dir.h"
 
 
-@interface TODSMSession()
+@interface TOSMBCSessionWrapper()
 
 @property (nonatomic,assign) smb_session *smb_session;
 
@@ -23,7 +23,7 @@
 
 
 
-@implementation TODSMSession
+@implementation TOSMBCSessionWrapper
 
 - (instancetype)init{
     self = [super init];
@@ -40,25 +40,21 @@
 - (void)dealloc{
     if(self.smb_session!=NULL){
         [self.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-            smb_tid shareID = [obj intValue];
+            smb_tid shareID = [obj unsignedShortValue];
             smb_tree_disconnect(self.smb_session, shareID);
         }];
         smb_session_destroy(self.smb_session);
         self.smb_session = NULL;
     }
-    self.lastRequestDate = nil;
 }
 
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
-        smb_tid share_id = [[self.shares objectForKey:shareName] intValue];
-        if(share_id==0){
-            share_id = -1;
-        }
+        smb_tid share_id = [[self.shares objectForKey:shareName] unsignedShortValue];
         return share_id;
     }
-    return -1;
+    return 0;
 }
 
 - (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName{
@@ -68,6 +64,9 @@
         @synchronized (self) {
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
+                if(cachedShareID>0 && self.smb_session!=NULL){
+                    smb_tree_disconnect(self.smb_session, cachedShareID);
+                }
                 [self.shares setObject:@(shareID) forKey:shareName];
             }
         }
@@ -78,6 +77,10 @@
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
         @synchronized (self) {
+            smb_tid cachedShareID = [self cachedShareIDForName:shareName];
+            if(cachedShareID>0 && self.smb_session!=NULL){
+                smb_tree_disconnect(self.smb_session, cachedShareID);
+            }
             [self.shares removeObjectForKey:shareName];
         }
     }

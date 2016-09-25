@@ -1,30 +1,30 @@
 //
-//  TODSMSessionCache.m
+//  TOSMBCSessionWrapperCache.m
 //  MyApp
 //
 //  Created by Artem Meleshko on 5/22/16.
 //  Copyright © 2016 My Company. All rights reserved.
 //
 
-#import "TODSMSessionCache.h"
-#import "TODSMSession.h"
+#import "TOSMBCSessionWrapperCache.h"
+#import "TOSMBCSessionWrapper.h"
 #import "TOSMBConstants.h"
 #import "TOSMBSession.h"
 
-@interface TODSMSessionCache()
+@interface TOSMBCSessionWrapperCache()
 
 @property (nonatomic,strong)NSMutableDictionary *privateCache;
 
 @end
 
 
-@implementation TODSMSessionCache
+@implementation TOSMBCSessionWrapperCache
 
 + (instancetype)sharedCache{
     static dispatch_once_t onceToken;
-    static TODSMSessionCache *cache = nil;
+    static TOSMBCSessionWrapperCache *cache = nil;
     dispatch_once(&onceToken, ^{
-        cache = [[TODSMSessionCache alloc] init];
+        cache = [[TOSMBCSessionWrapperCache alloc] init];
     });
     return cache;
 }
@@ -37,12 +37,12 @@
     return self;
 }
 
-- (TODSMSession *)sessionForKey:(NSString *)sessionKey{
+- (TOSMBCSessionWrapper *)sessionForKey:(NSString *)sessionKey{
     NSParameterAssert(sessionKey!=nil);
     if(sessionKey==nil){
         return nil;
     }
-    TODSMSession *session = [self.privateCache objectForKey:sessionKey];
+    TOSMBCSessionWrapper *session = [self.privateCache objectForKey:sessionKey];
     if(session!=nil && session.isValid==NO){
         [self removeSessionFromCache:session];
         session = nil;
@@ -50,20 +50,20 @@
     return session;
 }
 
-- (void)cacheSession:(TODSMSession *)session{
+- (void)cacheSession:(TOSMBCSessionWrapper *)session{
     NSParameterAssert(session!=nil && session.sessionKey!=nil);
     if(session==nil || session.sessionKey==nil){
         return;
     }
     @synchronized (self) {
-        TODSMSession *existingSession = [self sessionForKey:session.sessionKey];
+        TOSMBCSessionWrapper *existingSession = [self sessionForKey:session.sessionKey];
         if(session.isValid && session.lastRequestDate.timeIntervalSince1970>existingSession.lastRequestDate.timeIntervalSince1970){
             [self.privateCache setObject:session forKey:session.sessionKey];
         }
     }
 }
 
-- (void)removeSessionFromCache:(TODSMSession *)session{
+- (void)removeSessionFromCache:(TOSMBCSessionWrapper *)session{
     NSParameterAssert(session!=nil && session.sessionKey!=nil);
     if(session==nil || session.sessionKey==nil){
         return;

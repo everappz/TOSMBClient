@@ -30,7 +30,7 @@
 #import "TOSMBSessionDownloadTask.h"
 #import "TOHost.h"
 #import "TOSMBSessionUploadTask.h"
-#import "TODSMSessionCache.h"
+#import "TOSMBCSessionWrapperCache.h"
 
 const NSTimeInterval kSessionTimeout = 60.0;
 
@@ -83,7 +83,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 - (instancetype)init{
     if (self = [super init]) {
         self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
-        self.dsm_session = [[TODSMSession alloc] init];
+        self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
         self.enableSessionCache = YES;
         if (self.dsm_session == nil){
             return nil;
@@ -129,7 +129,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
     if(self.enableSessionCache){
-        [[TODSMSessionCache sharedCache] cacheSession:self.dsm_session];
+        [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
     }
     self.dsm_session = nil;
 }
@@ -192,7 +192,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 }
 
 - (void)reloadSession{
-    self.dsm_session = [[TODSMSession alloc] init];
+    self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
 }
 
 - (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session{
@@ -275,19 +275,19 @@ const NSTimeInterval kSessionTimeout = 60.0;
         const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
         const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [self.hostName cStringUsingEncoding:NSUTF8StringEncoding]);
         
-        TODSMSession *cachedSession = nil;
+        TOSMBCSessionWrapper *cachedSession = nil;
         
         NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
         NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
         NSString *dsm_session_password = [NSString stringWithUTF8String:password];
         
         if(self.enableSessionCache){
-            cachedSession = [[TODSMSessionCache sharedCache] sessionForKey:[TODSMSession sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
+            cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
         }
 
         if(cachedSession!=nil){
             self.dsm_session = cachedSession;
-            [[TODSMSessionCache sharedCache] removeSessionFromCache:cachedSession];
+            [[TOSMBCSessionWrapperCache sharedCache] removeSessionFromCache:cachedSession];
             self.lastRequestDate = [NSDate date];
         }
         else{
@@ -298,14 +298,14 @@ const NSTimeInterval kSessionTimeout = 60.0;
             self.dsm_session.password = dsm_session_password;
             
             //Attempt a connection
-            NSInteger result = smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP);
-            if (result != 0) {
+            int result = smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP);
+            if (result != DSM_SUCCESS) {
                 return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
             }
             
             //Attempt a login. Even if we're downgraded to guest, the login call will succeed
             smb_session_set_creds(session, domain, userName, password);
-            if (smb_session_login(session) != 0) {
+            if (smb_session_login(session) != DSM_SUCCESS) {
                 return errorForErrorCode(TOSMBSessionErrorCodeAuthenticationFailed);
             }
         }
@@ -339,10 +339,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If the path is nil, or '/', we'll be specifically requesting the
         //parent network share names as opposed to the actual file lists
         if (path.length == 0 || [path isEqualToString:@"/"]) {
-            smb_share_list list;
+            smb_share_list list=NULL;
             size_t shareCount = 0;
-            smb_share_get_list(self.session, &list, &shareCount);
-            if (shareCount == 0){
+            int smb_result = smb_share_get_list(self.session, &list, &shareCount);
+            if (smb_result!=DSM_SUCCESS){
                 return nil;
             }
             
@@ -359,7 +359,9 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 [shareList addObject:share];
             }
             
-            smb_share_list_destroy(list);
+            if(shareList!=NULL){
+                smb_share_list_destroy(list);
+            }
             
             NSArray *result = [NSArray arrayWithArray:shareList];
             return result;
@@ -377,10 +379,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
         smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
-        if(shareID<0){
+        if(shareID==0){
             smb_tree_connect(self.session, cStringName, &shareID);
         }
-        if (shareID < 0) {
+        if (shareID == 0 ) {
             [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
@@ -563,10 +565,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
         smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
-        if(shareID<0){
+        if(shareID==0){
             smb_tree_connect(self.session, cStringName, &shareID);
         }
-        if (shareID < 0) {
+        if (shareID ==0) {
             [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
@@ -672,10 +674,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
         smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
-        if(shareID<0){
+        if(shareID==0){
             smb_tree_connect(self.session, cStringName, &shareID);
         }
-        if (shareID < 0) {
+        if (shareID == 0) {
             [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
@@ -700,7 +702,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         int result = smb_file_mv(self.session, shareID, relativeFromPathCString, relativeToPathCString);
         
-        if(result!=0){
+        if(result!=DSM_SUCCESS){
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeUnableToMoveFile);
                 *error = resultError;
@@ -776,10 +778,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
         smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
-        if(shareID<0){
+        if(shareID==0){
             smb_tree_connect(self.session, cStringName, &shareID);
         }
-        if (shareID < 0) {
+        if (shareID == 0) {
             [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
@@ -932,15 +934,15 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
         
-        uint32_t result = smb_directory_rm(self.session, shareID, relativePathCString);
+        int result = smb_directory_rm(self.session, shareID, relativePathCString);
         
-        if(result!=0){
+        if(result!=DSM_SUCCESS){
             if (error) {
                 *error = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
             }
         }
         
-        return (result==0);
+        return (result==DSM_SUCCESS);
     }
 }
 
@@ -965,15 +967,15 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
         
-        uint32_t result = smb_file_rm(self.session, shareID, relativePathCString);
+        int result = smb_file_rm(self.session, shareID, relativePathCString);
 
-        if(result!=0){
+        if(result!=DSM_SUCCESS){
             if (error) {
                 *error = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
             }
         }
 
-        return (result==0);
+        return (result==DSM_SUCCESS);
     }
 }
 
@@ -1009,10 +1011,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
         smb_tid shareID = [self.dsm_session cachedShareIDForName:shareName];
-        if(shareID<0){
+        if(shareID==0){
             smb_tree_connect(self.session, cStringName, &shareID);
         }
-        if (shareID < 0) {
+        if (shareID == 0) {
             [self.dsm_session removeCachedShareIDForName:shareName];
             if (error) {
                 resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
@@ -1064,7 +1066,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
                             }
                         }
                     }
-                    result = [self deleteDirectoryAtPath:path inShare:shareID error:error];
+                    result = ([self deleteDirectoryAtPath:path inShare:shareID error:error]?0:-1);
                 }
                 else{
                     result = -1;
@@ -1072,7 +1074,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 
             }
             else{
-                result = [self deleteFileAtPath:path inShare:shareID error:error];
+                result = ([self deleteFileAtPath:path inShare:shareID error:error]?0:-1);
             }
 
             if(result!=0){

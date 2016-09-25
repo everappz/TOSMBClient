@@ -11,14 +11,14 @@
 #import "smb_share.h"
 #import "smb_stat.h"
 #import "smb_dir.h"
-#import "TODSMSession.h"
+#import "TOSMBCSessionWrapper.h"
 
 
 
 @interface TOSMBSession ()
 
 /* The session pointer responsible for this object. */
-@property (nonatomic, strong) TODSMSession *dsm_session;
+@property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
 @property (nonatomic, readonly, assign) smb_session *session;
 @property (nonatomic, strong) NSDate *lastRequestDate;
 @property (nonatomic, assign) BOOL enableSessionCache;

@@ -11,10 +11,13 @@
 
 
 @class TOSMBSession;
+@class TOSMBCSessionWrapper;
 
 @interface TOSMBSessionUploadTask : NSObject
 
 @property (readonly,weak) TOSMBSession *sessionObject;
+
+@property (readonly, strong) TOSMBCSessionWrapper *dsm_session;
 
 @property (readonly,copy) NSString *sourceFilePath;
 

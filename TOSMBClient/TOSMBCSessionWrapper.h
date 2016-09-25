@@ -1,5 +1,5 @@
 //
-//  TODSMSession.h
+//  TOSMBCSessionWrapper.h
 //  MyApp
 //
 //  Created by Artem Meleshko on 5/22/16.
@@ -10,7 +10,7 @@
 #import "smb_session.h"
 
 
-@interface TODSMSession : NSObject
+@interface TOSMBCSessionWrapper : NSObject
 
 @property (nonatomic,readonly,assign) smb_session *smb_session;
 

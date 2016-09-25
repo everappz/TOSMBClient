@@ -42,6 +42,7 @@
 @property (nonatomic, copy) NSString *tempFilePath;
 
 @property (nonatomic, weak) TOSMBSession *sessionObject;
+@property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
 @property (nonatomic, strong) TOSMBSessionFile *file;
 @property (nonatomic, strong) NSBlockOperation *downloadOperation;
 
@@ -85,6 +86,7 @@
 - (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
     if (self = [super init]) {
         _sessionObject = session;
+        _dsm_session = session.dsm_session;
         _sourceFilePath = [filePath copy];
         _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
         _delegate = delegate;
@@ -98,6 +100,7 @@
 - (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath progressHandler:(id)progressHandler successHandler:(id)successHandler failHandler:(id)failHandler{
     if (self = [super init]) {
         _sessionObject = session;
+        _dsm_session = session.dsm_session;
         _sourceFilePath = [filePath copy];
         _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
         _progressHandler = [progressHandler copy];
@@ -169,6 +172,10 @@
     return basePath;
 }
 
+- (smb_session *)session{
+    return self.dsm_session.smb_session;
+}
+
 #pragma mark - Public Control Methods -
 
 - (void)resume{
@@ -209,8 +216,9 @@
 #pragma mark - Private Control Methods -
 - (void)fail
 {
-    if (self.state != TOSMBSessionTransferTaskStateRunning)
+    if (self.state != TOSMBSessionTransferTaskStateRunning){
         return;
+    }
     
     [self cancel];
     
@@ -282,8 +290,8 @@
 
 - (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    if(self.sessionObject.session!=NULL){
-        smb_stat fileStat = smb_fstat(self.sessionObject.session, treeID, fileCString);
+    if(self.session!=NULL){
+        smb_stat fileStat = smb_fstat(self.session, treeID, fileCString);
         if (fileStat==NULL){
             return nil;
         }
@@ -317,13 +325,13 @@
 
 - (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation{
     
-    NSParameterAssert(self.sessionObject.session);
+    NSParameterAssert(self.session!=NULL);
     
-    if (weakOperation.isCancelled || self.sessionObject.session==NULL){
+    if (weakOperation.isCancelled || self.session==NULL){
         return;
     }
     
-    smb_tid treeID = -1;
+    smb_tid treeID = 0;
     smb_fd fileID = 0;
     
     //---------------------------------------------------------------------------------------
@@ -336,12 +344,12 @@
             self.backgroundTaskIdentifier = 0;
         }
         
-        if (self.sessionObject.session && fileID){
-            smb_fclose(self.sessionObject.session, fileID);
+        if (self.session!=NULL && fileID){
+            smb_fclose(self.session, fileID);
         }
         
-        //if (self.sessionObject.session && treeID){
-        //    smb_tree_disconnect(self.sessionObject.session, treeID);
+        //if (self.session!=NULL && treeID){
+        //    smb_tree_disconnect(self.session, treeID);
         //}
 
     };
@@ -368,19 +376,19 @@
     //Next attach to the share we'll be using
     NSString *shareName = [self.sessionObject shareNameFromPath:self.sourceFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-    treeID = [self.sessionObject.dsm_session cachedShareIDForName:shareName];
+    treeID = [self.dsm_session cachedShareIDForName:shareName];
 
-    if(treeID<0){
-        smb_tree_connect((__bridge smb_session *)(self.sessionObject.dsm_session), shareCString, &treeID);
+    if(treeID==0){
+        smb_tree_connect(self.session, shareCString, &treeID);
     }
-    if (treeID<0) {
-        [self.sessionObject.dsm_session removeCachedShareIDForName:shareName];
+    if (treeID==0) {
+        [self.dsm_session removeCachedShareIDForName:shareName];
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
         cleanup();
         return;
     }
     else{
-        [self.sessionObject.dsm_session cacheShareID:treeID forName:shareName];
+        [self.dsm_session cacheShareID:treeID forName:shareName];
     }
     
     
@@ -420,8 +428,8 @@
     //---------------------------------------------------------------------------------------
     //Open the file handle
     
-    smb_fopen(self.sessionObject.session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
-    if (!fileID) {
+    smb_fopen(self.session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
+    if (fileID==0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
         cleanup();
         return;
@@ -456,7 +464,7 @@
     self.backgroundTaskIdentifier = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{ [self suspend]; }];
     
     if (seekOffset > 0) {
-        smb_fseek(self.sessionObject.session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
+        smb_fseek(self.session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
         [self didResumeAtOffset:seekOffset totalBytesExpected:self.countOfBytesExpectedToReceive];
     }
     
@@ -467,7 +475,7 @@
     
     do {
         @autoreleasepool {
-            bytesRead = smb_fread(self.sessionObject.session, fileID, buffer, bufferSize);
+            bytesRead = smb_fread(self.session, fileID, buffer, bufferSize);
             
             if (bytesRead < 0) {
                 [self fail];
@@ -475,15 +483,15 @@
                 break;
             }
 
-            
             //Save them to the file handle (And ensure the NSData object is flushed immediately)
             NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
-            [fileHandle writeData:data];
-            
-            
-            //Ensure the data is properly written to disk before proceeding
-            [fileHandle synchronizeFile];
-            
+            @try {
+                [fileHandle writeData:data];
+                
+                //Ensure the data is properly written to disk before proceeding
+                [fileHandle synchronizeFile];
+            } @catch (NSException *exception) {}
+
             if (weakOperation.isCancelled){
                 break;
             }
