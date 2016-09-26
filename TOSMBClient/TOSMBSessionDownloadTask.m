@@ -172,10 +172,6 @@
     return basePath;
 }
 
-- (smb_session *)session{
-    return self.dsm_session.smb_session;
-}
-
 #pragma mark - Public Control Methods -
 
 - (void)resume{
@@ -290,8 +286,12 @@
 
 - (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    if(self.session!=NULL){
-        smb_stat fileStat = smb_fstat(self.session, treeID, fileCString);
+    if(self.dsm_session!=NULL){
+        __block smb_stat fileStat = NULL;
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+            fileStat = smb_fstat(session, treeID, fileCString);
+        }];
+        
         if (fileStat==NULL){
             return nil;
         }
@@ -325,14 +325,14 @@
 
 - (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation{
     
-    NSParameterAssert(self.session!=NULL);
+    NSParameterAssert(self.dsm_session!=NULL);
     
-    if (weakOperation.isCancelled || self.session==NULL){
+    if (weakOperation.isCancelled || self.dsm_session==nil){
         return;
     }
     
-    smb_tid treeID = 0;
-    smb_fd fileID = 0;
+    __block smb_tid treeID = 0;
+    __block smb_fd fileID = 0;
     
     //---------------------------------------------------------------------------------------
     //Set up a cleanup block that'll release any handles before cancellation
@@ -344,8 +344,10 @@
             self.backgroundTaskIdentifier = 0;
         }
         
-        if (self.session!=NULL && fileID){
-            smb_fclose(self.session, fileID);
+        if (fileID){
+            [self.dsm_session inSMBSession:^(smb_session *session) {
+                smb_fclose(session, fileID);
+            }];
         }
         
         //if (self.session!=NULL && treeID){
@@ -379,7 +381,9 @@
     treeID = [self.dsm_session cachedShareIDForName:shareName];
 
     if(treeID==0){
-        smb_tree_connect(self.session, shareCString, &treeID);
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+             smb_tree_connect(session, shareCString, &treeID);
+        }];
     }
     if (treeID==0) {
         [self.dsm_session removeCachedShareIDForName:shareName];
@@ -390,7 +394,6 @@
     else{
         [self.dsm_session cacheShareID:treeID forName:shareName];
     }
-    
     
     if (weakOperation.isCancelled) {
         cleanup();
@@ -427,8 +430,10 @@
     
     //---------------------------------------------------------------------------------------
     //Open the file handle
+    [self.dsm_session inSMBSession:^(smb_session *session) {
+        smb_fopen(session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
+    }];
     
-    smb_fopen(self.session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
     if (fileID==0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
         cleanup();
@@ -464,18 +469,23 @@
     self.backgroundTaskIdentifier = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{ [self suspend]; }];
     
     if (seekOffset > 0) {
-        smb_fseek(self.session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+            smb_fseek(session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
+        }];
         [self didResumeAtOffset:seekOffset totalBytesExpected:self.countOfBytesExpectedToReceive];
     }
     
     //Perform the file download
-    int64_t bytesRead = 0;
+    __block int64_t bytesRead = 0;
     NSInteger bufferSize = 32768;
     char *buffer = malloc(bufferSize);
     
     do {
         @autoreleasepool {
-            bytesRead = smb_fread(self.session, fileID, buffer, bufferSize);
+            
+            [self.dsm_session inSMBSession:^(smb_session *session) {
+                bytesRead = smb_fread(session, fileID, buffer, bufferSize);
+            }];
             
             if (bytesRead < 0) {
                 [self fail];

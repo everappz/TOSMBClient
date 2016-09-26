@@ -12,8 +12,11 @@
 #import "smb_stat.h"
 #import "smb_dir.h"
 
+static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrapperSpecificKey;
 
-@interface TOSMBCSessionWrapper()
+@interface TOSMBCSessionWrapper(){
+       dispatch_queue_t    _queue;
+}
 
 @property (nonatomic,assign) smb_session *smb_session;
 
@@ -33,18 +36,53 @@
             return nil;
         }
         self.shares = [[NSMutableDictionary alloc] init];
+        
+        _queue = dispatch_queue_create([[NSString stringWithFormat:@"smb.session.wrapper.%@", self] UTF8String], NULL);
+        dispatch_queue_set_specific(_queue, kTOSMBCSessionWrapperSpecificKey, (__bridge void *)self, NULL);
     }
     return self;
 }
 
 - (void)dealloc{
+    [self close];
+    if (_queue) {
+        _queue = 0x00;
+    }
+}
+
+- (void)close {
     if(self.smb_session!=NULL){
-        [self.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-            smb_tid shareID = [obj unsignedShortValue];
-            smb_tree_disconnect(self.smb_session, shareID);
+        [self inSyncQueue:^{
+            [self->_shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+                smb_tid shareID = [obj unsignedShortValue];
+                smb_tree_disconnect(self->_smb_session, shareID);
+            }];
+            smb_session_destroy(self->_smb_session);
+            self->_smb_session = NULL;
         }];
-        smb_session_destroy(self.smb_session);
-        self.smb_session = NULL;
+    }
+}
+
+- (void)inSMBSession:(void (^)(smb_session *session))block {
+    TOSMBCSessionWrapper *currentSyncQueue = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperSpecificKey);
+    assert(currentSyncQueue != self && "inSMBSession: was called reentrantly on the same queue, which would lead to a deadlock");
+    dispatch_sync(_queue, ^() {
+        smb_session *smb_session = self->_smb_session;
+        if(smb_session!=NULL){
+            block(smb_session);
+        }
+    });
+}
+
+- (void)inSyncQueue:(void(^)(void))block{
+    TOSMBCSessionWrapper *currentSyncQueue = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperSpecificKey);
+    if(currentSyncQueue != self){
+        dispatch_sync(_queue, ^() {
+            block();
+        });
+    }
+    else{
+        block();
     }
 }
 
@@ -65,7 +103,9 @@
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
                 if(cachedShareID>0 && self.smb_session!=NULL){
-                    smb_tree_disconnect(self.smb_session, cachedShareID);
+                    [self inSyncQueue:^{
+                         smb_tree_disconnect(self.smb_session, cachedShareID);
+                    }];
                 }
                 [self.shares setObject:@(shareID) forKey:shareName];
             }
@@ -79,7 +119,9 @@
         @synchronized (self) {
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(cachedShareID>0 && self.smb_session!=NULL){
-                smb_tree_disconnect(self.smb_session, cachedShareID);
+                [self inSyncQueue:^{
+                     smb_tree_disconnect(self.smb_session, cachedShareID);
+                }];
             }
             [self.shares removeObjectForKey:shareName];
         }

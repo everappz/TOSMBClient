@@ -76,10 +76,6 @@
     [self.uploadOperation cancel];
 }
 
-- (smb_session *)session{
-    return self.dsm_session.smb_session;
-}
-
 #pragma mark - Public Control Methods -
 
 - (void)start{
@@ -143,10 +139,11 @@
 
 - (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    smb_stat fileStat = NULL;
-    if(self.session!=NULL){
-        fileStat = smb_fstat(self.session, treeID, fileCString);
-    }
+    __block smb_stat fileStat = NULL;
+    [self.dsm_session inSMBSession:^(smb_session *session) {
+         fileStat = smb_fstat(session, treeID, fileCString);
+    }];
+    
     if (fileStat==NULL){
         return nil;
     }
@@ -186,14 +183,14 @@
 
 - (void)performUploadWithOperation:(__weak NSBlockOperation *)weakOperation{
     
-    NSParameterAssert(self.session);
+    NSParameterAssert(self.dsm_session);
     
-    if (weakOperation.isCancelled  || self.session==NULL){
+    if (weakOperation.isCancelled  || self.dsm_session==nil){
         return;
     }
     
-    smb_tid treeID = 0;
-    smb_fd fileID = 0;
+    __block smb_tid treeID = 0;
+    __block smb_fd fileID = 0;
     
     //---------------------------------------------------------------------------------------
     //Set up paths
@@ -214,11 +211,15 @@
     //---------------------------------------------------------------------------------------
     //Set up a cleanup block that'll release any handles before cancellation
     void (^cleanup)(void) = ^{
-        if (self.session!=NULL && fileID){
-            smb_fclose(self.session, fileID);
+        if (fileID>0){
+            [self.dsm_session inSMBSession:^(smb_session *session) {
+               smb_fclose(session, fileID);;
+            }];
         }
-        if (self.session!=NULL && treeID){
-            smb_file_rm(self.session, treeID, relativeUploadPathCString);
+        if (treeID>0){
+            [self.dsm_session inSMBSession:^(smb_session *session) {
+                 smb_file_rm(session, treeID, relativeUploadPathCString);
+            }];
             //smb_tree_disconnect(self.session, treeID);
         }
     };
@@ -247,7 +248,9 @@
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     treeID = [self.dsm_session cachedShareIDForName:shareName];
     if(treeID==0){
-        smb_tree_connect(self.session, shareCString,&treeID);
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+            smb_tree_connect(session, shareCString,&treeID);
+        }];
     }
     if (treeID==0) {
         [self.dsm_session removeCachedShareIDForName:shareName];
@@ -293,8 +296,10 @@
     
     //---------------------------------------------------------------------------------------
     //Open the file handle
-    
-    smb_fopen(self.session, treeID, relativeUploadPathCString, SMB_MOD_RW,&fileID);
+    [self.dsm_session inSMBSession:^(smb_session *session) {
+        smb_fopen(session, treeID, relativeUploadPathCString, SMB_MOD_RW,&fileID);
+    }];
+
     if (fileID==0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
         cleanup();
@@ -337,10 +342,10 @@
             
             void *bytes = (void *)data.bytes;
             while (bytesToWrite > 0) {
-                ssize_t r = -1;
-                if(self.session!=NULL){
-                    r = smb_fwrite(self.session, fileID, bytes, bytesToWrite);
-                }
+                __block ssize_t r = -1;
+                [self.dsm_session inSMBSession:^(smb_session *session) {
+                    r = smb_fwrite(session, fileID, bytes, bytesToWrite);
+                }];
                 
                 if (r == 0){
                     break;
@@ -376,8 +381,10 @@
     }
     @catch(NSException *exc){}
     
-    if (self.session && fileID){
-        smb_fclose(self.session, fileID);
+    if (fileID>0){
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+            smb_fclose(session, fileID);
+        }];
     }
     
     if (weakOperation.isCancelled) {
@@ -387,16 +394,17 @@
     
     //---------------------------------------------------------------------------------------
     //Move the finished file to its destination
-    
     TOSMBSessionFile *existingFile = [self requestFileForItemAtPath:formattedPath inTree:treeID];
-    if(self.session && existingFile){
-        smb_file_rm(self.session, treeID, relativeToPathCString);
+    if (existingFile){
+        [self.dsm_session inSMBSession:^(smb_session *session) {
+            smb_file_rm(session, treeID, relativeToPathCString);
+        }];
     }
-    int result = -1;
     
-    if(self.session){
-        result = smb_file_mv(self.session, treeID, relativeUploadPathCString, relativeToPathCString);
-    }
+    __block int result = DSM_ERROR_GENERIC;
+    [self.dsm_session inSMBSession:^(smb_session *session) {
+        result = smb_file_mv(session, treeID, relativeUploadPathCString, relativeToPathCString);
+    }];
     
     self.state = TOSMBSessionTransferTaskStateCompleted;
     

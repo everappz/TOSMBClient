@@ -27,7 +27,8 @@
 /** SMB Error Values */
 typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
 {
-    TOSMBSessionErrorCodeUnknown = 0,                               /* Error code was not specified. */
+    TOSMBSessionErrorCodeNone = 0,
+    TOSMBSessionErrorCodeUnknown = 1,                               /* Error code was not specified. */
     TOSMBSessionErrorNotOnWiFi = 1000,                              /* The device isn't presently connected to a local network. */
     TOSMBSessionErrorCodeUnableToResolveAddress = 1001,             /* Not enough connection information to resolve was supplied. */
     TOSMBSessionErrorCodeUnableToConnect = 1002,                    /* The connection attempt failed. */

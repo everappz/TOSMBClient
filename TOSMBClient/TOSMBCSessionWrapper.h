@@ -12,8 +12,6 @@
 
 @interface TOSMBCSessionWrapper : NSObject
 
-@property (nonatomic,readonly,assign) smb_session *smb_session;
-
 @property (nonatomic,strong) NSDate *lastRequestDate;
 
 @property (nonatomic,copy) NSString *userName;
@@ -39,6 +37,6 @@
                             userName:(NSString *)userName
                             password:(NSString *)password;
 
-
+- (void)inSMBSession:(void (^)(smb_session *session))block;
 
 @end

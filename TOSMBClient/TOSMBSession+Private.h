@@ -19,9 +19,7 @@
 
 /* The session pointer responsible for this object. */
 @property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
-@property (nonatomic, readonly, assign) smb_session *session;
 @property (nonatomic, strong) NSDate *lastRequestDate;
-@property (nonatomic, assign) BOOL enableSessionCache;
 
 /* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, assign, readwrite) NSInteger guest;
@@ -31,7 +29,6 @@
 /* Connection/Authentication handling */
 - (BOOL)deviceIsOnWiFi;
 - (NSError *)attemptConnection;
-- (NSError *)attemptConnectionWithSessionPointer:(smb_session *)session;
 
 /* File path parsing */
 - (NSString *)shareNameFromPath:(NSString *)path;
