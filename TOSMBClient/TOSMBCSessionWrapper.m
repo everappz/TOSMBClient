@@ -57,6 +57,7 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
                 smb_tid shareID = [obj unsignedShortValue];
                 smb_tree_disconnect(self->_smb_session, shareID);
             }];
+            smb_session_logoff(self->_smb_session);
             smb_session_destroy(self->_smb_session);
             self->_smb_session = NULL;
         }];
