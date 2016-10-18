@@ -39,4 +39,6 @@
 
 - (void)inSMBSession:(void (^)(smb_session *session))block;
 
+- (void)close;
+
 @end

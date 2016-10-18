@@ -57,7 +57,10 @@
     }
     @synchronized (self) {
         TOSMBCSessionWrapper *existingSession = [self sessionForKey:session.sessionKey];
-        if(session.isValid && session.lastRequestDate.timeIntervalSince1970>existingSession.lastRequestDate.timeIntervalSince1970){
+        if(session.isValid && session.lastRequestDate.timeIntervalSince1970>existingSession.lastRequestDate.timeIntervalSince1970 && session!=existingSession){
+            if(existingSession){
+                [self removeSessionFromCache:existingSession];
+            }
             [self.privateCache setObject:session forKey:session.sessionKey];
         }
     }
@@ -69,6 +72,7 @@
         return;
     }
     @synchronized (self) {
+        [session close];
         [self.privateCache removeObjectForKey:session.sessionKey];
     }
 }

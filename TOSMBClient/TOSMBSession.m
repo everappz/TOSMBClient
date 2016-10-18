@@ -273,50 +273,53 @@ const NSTimeInterval kSessionTimeout = 60.0;
         NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
         NSString *dsm_session_password = [NSString stringWithUTF8String:password];
         
-        TOSMBCSessionWrapper *cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
-        
-        if(cachedSession!=nil){
-            self.dsm_session = cachedSession;
-            self.lastRequestDate = [NSDate date];
-        }
-        else{
+        @synchronized ([TOSMBCSessionWrapperCache sharedCache]) {
             
-            self.dsm_session.ipAddress = self.ipAddress;
-            self.dsm_session.domain = dsm_session_domain;
-            self.dsm_session.userName = dsm_session_userName;
-            self.dsm_session.password = dsm_session_password;
+            TOSMBCSessionWrapper *cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
             
-            //Attempt a connection
-
-            __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
-            
-            [self.dsm_session inSMBSession:^(smb_session *session) {
-                int result = smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP);
-                if (result != DSM_SUCCESS) {
-                    errorCode = TOSMBSessionErrorCodeUnableToConnect;
-                    return;
-                }
-                
-                //Attempt a login. Even if we're downgraded to guest, the login call will succeed
-                smb_session_set_creds(session, domain, userName, password);
-                if (smb_session_login(session) != DSM_SUCCESS) {
-                    errorCode = TOSMBSessionErrorCodeAuthenticationFailed;
-                    return;
-                }
-                
-                self.guest = smb_session_is_guest(session);
-            }];
-            
-            if(errorCode!=TOSMBSessionErrorCodeNone){
-                 return errorForErrorCode(errorCode);
+            if(cachedSession!=nil){
+                self.dsm_session = cachedSession;
+                self.lastRequestDate = [NSDate date];
             }
             else{
-                [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
+                
+                self.dsm_session.ipAddress = self.ipAddress;
+                self.dsm_session.domain = dsm_session_domain;
+                self.dsm_session.userName = dsm_session_userName;
+                self.dsm_session.password = dsm_session_password;
+                
+                //Attempt a connection
+
+                __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
+                
+                [self.dsm_session inSMBSession:^(smb_session *session) {
+                    int result = smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP);
+                    if (result != DSM_SUCCESS) {
+                        errorCode = TOSMBSessionErrorCodeUnableToConnect;
+                        return;
+                    }
+                    
+                    //Attempt a login. Even if we're downgraded to guest, the login call will succeed
+                    smb_session_set_creds(session, domain, userName, password);
+                    if (smb_session_login(session) != DSM_SUCCESS) {
+                        errorCode = TOSMBSessionErrorCodeAuthenticationFailed;
+                        return;
+                    }
+                    
+                    self.guest = smb_session_is_guest(session);
+                }];
+                
+                if(errorCode!=TOSMBSessionErrorCodeNone){
+                     return errorForErrorCode(errorCode);
+                }
+                else{
+                    [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
+                }
+                
             }
             
+            self.connected = YES;
         }
-        
-        self.connected = YES;
 
         return nil;
     }
