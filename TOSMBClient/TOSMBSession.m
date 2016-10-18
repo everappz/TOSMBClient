@@ -694,7 +694,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         smb_tid shareID = [self connectToShareWithName:shareName error:error];
         if(shareID==0){
-            return nil;
+            return NO;
         }
         
         NSString *relativeFromPath = [self filePathExcludingSharePathFromPath:fromPath];
@@ -789,7 +789,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         smb_tid shareID = [self connectToShareWithName:shareName error:error];
         if(shareID==0){
-            return nil;
+            return NO;
         }
         
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
@@ -1023,7 +1023,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         //If not, make a new connection
         smb_tid shareID = [self connectToShareWithName:shareName error:error];
         if(shareID==0){
-            return nil;
+            return NO;
         }
         
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
