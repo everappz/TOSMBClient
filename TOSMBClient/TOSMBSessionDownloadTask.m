@@ -325,9 +325,9 @@
 
 - (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation{
     
-    NSParameterAssert(self.dsm_session!=NULL);
+    NSParameterAssert(self.dsm_session!=nil && self.sessionObject!=nil);
     
-    if (weakOperation.isCancelled || self.dsm_session==nil){
+    if (weakOperation.isCancelled || self.dsm_session==nil || self.sessionObject==nil){
         return;
     }
     
@@ -361,6 +361,8 @@
     
     //First, check to make sure the file is there, and to acquire its attributes
     NSError *error = [self.sessionObject attemptConnection];
+    self.dsm_session = self.sessionObject.dsm_session;
+    
     if (error) {
         [self didFailWithError:error];
         cleanup();

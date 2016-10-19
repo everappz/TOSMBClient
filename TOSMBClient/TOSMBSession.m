@@ -128,7 +128,12 @@ const NSTimeInterval kSessionTimeout = 60.0;
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
+    [self close];
     self.dsm_session = nil;
+}
+    
+- (void)close{
+    [self.dsm_session close];
 }
 
 #pragma mark - Authorization -
@@ -174,6 +179,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 }
 
 - (void)reloadSession{
+    [self.dsm_session close];
     self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
 }
 
@@ -273,15 +279,17 @@ const NSTimeInterval kSessionTimeout = 60.0;
         NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
         NSString *dsm_session_password = [NSString stringWithUTF8String:password];
         
-        @synchronized ([TOSMBCSessionWrapperCache sharedCache]) {
-            
+        //@synchronized ([TOSMBCSessionWrapperCache sharedCache]) {
+        
+        /*
             TOSMBCSessionWrapper *cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
             
             if(cachedSession!=nil){
                 self.dsm_session = cachedSession;
                 self.lastRequestDate = [NSDate date];
             }
-            else{
+            else
+         */{
                 
                 self.dsm_session.ipAddress = self.ipAddress;
                 self.dsm_session.domain = dsm_session_domain;
@@ -312,14 +320,14 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 if(errorCode!=TOSMBSessionErrorCodeNone){
                      return errorForErrorCode(errorCode);
                 }
-                else{
-                    [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
-                }
+                //else{
+                //    [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
+                //}
                 
             }
             
             self.connected = YES;
-        }
+        //}
 
         return nil;
     }

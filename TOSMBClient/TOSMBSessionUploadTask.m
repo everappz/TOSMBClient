@@ -183,9 +183,9 @@
 
 - (void)performUploadWithOperation:(__weak NSBlockOperation *)weakOperation{
     
-    NSParameterAssert(self.dsm_session);
+    NSParameterAssert(self.dsm_session!=nil && self.sessionObject!=nil);
     
-    if (weakOperation.isCancelled  || self.dsm_session==nil){
+    if (weakOperation.isCancelled  || self.dsm_session==nil || self.sessionObject==nil){
         return;
     }
     
@@ -213,7 +213,7 @@
     void (^cleanup)(void) = ^{
         if (fileID>0){
             [self.dsm_session inSMBSession:^(smb_session *session) {
-               smb_fclose(session, fileID);;
+               smb_fclose(session, fileID);
             }];
         }
         if (treeID>0){
@@ -229,6 +229,7 @@
     
     //First, check to make sure the file is there, and to acquire its attributes
     NSError *error = [self.sessionObject attemptConnection];
+    self.dsm_session = self.sessionObject.dsm_session;
     if (error) {
         [self didFailWithError:error];
         cleanup();
