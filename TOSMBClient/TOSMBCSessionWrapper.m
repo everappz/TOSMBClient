@@ -52,15 +52,15 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
 - (void)close {
     if(self.smb_session!=NULL){
         [self inSyncQueue:^{
-            [self->_shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+            [self.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
                 smb_tid shareID = [obj unsignedShortValue];
-                smb_tree_disconnect(self->_smb_session, shareID);
+                smb_tree_disconnect(self.smb_session, shareID);
             }];
             if([self isConnected]){
-                smb_session_logoff(self->_smb_session);
+                smb_session_logoff(self.smb_session);
             }
-            smb_session_destroy(self->_smb_session);
-            self->_smb_session = NULL;
+            smb_session_destroy(self.smb_session);
+            self.smb_session = NULL;
         }];
     }
 }
@@ -69,7 +69,7 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
     TOSMBCSessionWrapper *currentSyncQueue = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperSpecificKey);
     assert(currentSyncQueue != self && "inSMBSession: was called reentrantly on the same queue, which would lead to a deadlock");
     dispatch_sync(_queue, ^() {
-        smb_session *smb_session = self->_smb_session;
+        smb_session *smb_session = self.smb_session;
         if(smb_session!=NULL){
             block(smb_session);
         }
