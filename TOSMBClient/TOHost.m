@@ -174,15 +174,21 @@
 // http://stackoverflow.com/questions/1679152/how-to-validate-an-ip-address-with-regular-expression-in-objective-c
 
 + (BOOL)isValidIPv4Address:(NSString *)addressString{
-    struct in_addr throwaway;
-    int success = inet_pton(AF_INET, [addressString UTF8String], &throwaway);
-    return (success == 1);
+    if(addressString.length>0){
+        struct in_addr throwaway;
+        int success = inet_pton(AF_INET, [addressString UTF8String], &throwaway);
+        return (success == 1);
+    }
+    return NO;
 }
 
 + (BOOL)isValidIPv6Address:(NSString *)addressString{
-    struct in6_addr throwaway;
-    int success = inet_pton(AF_INET6, [addressString UTF8String], &throwaway);
-    return (success == 1);
+    if(addressString.length>0){
+        struct in6_addr throwaway;
+        int success = inet_pton(AF_INET6, [addressString UTF8String], &throwaway);
+        return (success == 1);
+    }
+    return NO;
 }
 
 + (BOOL)isValidIPAddress:(NSString *)addressString{
