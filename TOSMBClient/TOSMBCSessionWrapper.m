@@ -59,8 +59,10 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
             if([self isConnected]){
                 smb_session_logoff(self.smb_session);
             }
-            smb_session_destroy(self.smb_session);
-            self.smb_session = NULL;
+            if(self.smb_session!=NULL){
+                smb_session_destroy(self.smb_session);
+                self.smb_session = NULL;
+            }
         }];
     }
 }
