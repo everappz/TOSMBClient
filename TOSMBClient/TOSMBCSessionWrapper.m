@@ -49,6 +49,7 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
     }
 }
 
+
 - (void)close {
     if(self.smb_session!=NULL){
         [self inSyncQueue:^{
