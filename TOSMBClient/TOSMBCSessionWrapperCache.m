@@ -1,9 +1,9 @@
 //
 //  TOSMBCSessionWrapperCache.m
-//  MyApp
+//  Everapp
 //
 //  Created by Artem Meleshko on 5/22/16.
-//  Copyright © 2016 My Company. All rights reserved.
+//  Copyright © 2016 Everappz. All rights reserved.
 //
 
 #import "TOSMBCSessionWrapperCache.h"

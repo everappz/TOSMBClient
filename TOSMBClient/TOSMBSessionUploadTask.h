@@ -1,9 +1,9 @@
 //
 //  TOSMBSessionUploadTask.h
-//  MyApp
+//  Everapp
 //
 //  Created by Artem Meleshko on 2/14/16.
-//  Copyright © 2016 My Company. All rights reserved.
+//  Copyright © 2016 Everappz. All rights reserved.
 //
 
 #import <Foundation/Foundation.h>

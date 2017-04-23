@@ -1,9 +1,9 @@
 //
 //  TOHost.m
-//  MyApp
+//  Everapp
 //
 //  Created by Artem Meleshko on 2/13/16.
-//  Copyright © 2016 My Company. All rights reserved.
+//  Copyright © 2016 Everappz. All rights reserved.
 //
 
 #import "TOHost.h"
