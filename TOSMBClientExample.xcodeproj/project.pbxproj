@@ -26,8 +26,8 @@
 		EF8B370C1C7528CC005BAB2A /* libdsm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EF8B37091C7528C0005BAB2A /* libdsm.a */; };
 		EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */; };
 		EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */; };
-		EFF6AA301CF2188E00ABFC2F /* TODSMSession.m in Sources */ = {isa = PBXBuildFile; fileRef = EFF6AA2C1CF2188E00ABFC2F /* TODSMSession.m */; };
-		EFF6AA311CF2188E00ABFC2F /* TODSMSessionCache.m in Sources */ = {isa = PBXBuildFile; fileRef = EFF6AA2E1CF2188E00ABFC2F /* TODSMSessionCache.m */; };
+		EFC809141F168F7900695E11 /* TOSMBCSessionWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */; };
+		EFC809151F168F7900695E11 /* TOSMBCSessionWrapperCache.m in Sources */ = {isa = PBXBuildFile; fileRef = EFC809131F168F7900695E11 /* TOSMBCSessionWrapperCache.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -91,11 +91,11 @@
 		EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOHost.m; sourceTree = "<group>"; };
 		EFBDA84C1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionUploadTask.h; sourceTree = "<group>"; };
 		EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionUploadTask.m; sourceTree = "<group>"; };
-		EFF6AA2C1CF2188E00ABFC2F /* TODSMSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TODSMSession.m; sourceTree = "<group>"; };
-		EFF6AA2D1CF2188E00ABFC2F /* TODSMSessionCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TODSMSessionCache.h; sourceTree = "<group>"; };
-		EFF6AA2E1CF2188E00ABFC2F /* TODSMSessionCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TODSMSessionCache.m; sourceTree = "<group>"; };
+		EFC809101F168F7900695E11 /* TOSMBCSessionWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBCSessionWrapper.h; sourceTree = "<group>"; };
+		EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBCSessionWrapper.m; sourceTree = "<group>"; };
+		EFC809121F168F7900695E11 /* TOSMBCSessionWrapperCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBCSessionWrapperCache.h; sourceTree = "<group>"; };
+		EFC809131F168F7900695E11 /* TOSMBCSessionWrapperCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBCSessionWrapperCache.m; sourceTree = "<group>"; };
 		EFF6AA2F1CF2188E00ABFC2F /* TOSMBSession+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TOSMBSession+Private.h"; sourceTree = "<group>"; };
-		EFF6AA321CF218A200ABFC2F /* TODSMSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TODSMSession.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,10 +195,6 @@
 				2214DCF81B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m */,
 				22236CF71B67C2C700176C34 /* TOSMBSession.h */,
 				22236CF81B67C2C700176C34 /* TOSMBSession.m */,
-				EFF6AA321CF218A200ABFC2F /* TODSMSession.h */,
-				EFF6AA2C1CF2188E00ABFC2F /* TODSMSession.m */,
-				EFF6AA2D1CF2188E00ABFC2F /* TODSMSessionCache.h */,
-				EFF6AA2E1CF2188E00ABFC2F /* TODSMSessionCache.m */,
 				EFF6AA2F1CF2188E00ABFC2F /* TOSMBSession+Private.h */,
 				22301F6E1B6DED2500326F84 /* TOSMBSessionFile.h */,
 				22301F6F1B6DED2500326F84 /* TOSMBSessionFile.m */,
@@ -208,6 +204,10 @@
 				EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */,
 				EFBDA84A1C70BBFF001BDEF6 /* TOHost.h */,
 				EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */,
+				EFC809101F168F7900695E11 /* TOSMBCSessionWrapper.h */,
+				EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */,
+				EFC809121F168F7900695E11 /* TOSMBCSessionWrapperCache.h */,
+				EFC809131F168F7900695E11 /* TOSMBCSessionWrapperCache.m */,
 			);
 			path = TOSMBClient;
 			sourceTree = "<group>";
@@ -348,18 +348,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				22416F681B7125A3007B8A8B /* TOFilesTableViewController.m in Sources */,
-				EFF6AA311CF2188E00ABFC2F /* TODSMSessionCache.m in Sources */,
 				2214DCC81B661CD2003E3EF1 /* TORootTableViewController.m in Sources */,
 				2214DCF61B666766003E3EF1 /* TONetBIOSNameService.m in Sources */,
 				2214DCC51B661CD2003E3EF1 /* TOAppDelegate.m in Sources */,
+				EFC809141F168F7900695E11 /* TOSMBCSessionWrapper.m in Sources */,
 				EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */,
 				22301F701B6DED2500326F84 /* TOSMBSessionFile.m in Sources */,
 				22AE8B881B6F66E4008412CF /* TOSMBSessionDownloadTask.m in Sources */,
 				22236CF91B67C2C700176C34 /* TOSMBSession.m in Sources */,
-				EFF6AA301CF2188E00ABFC2F /* TODSMSession.m in Sources */,
 				2214DCC21B661CD2003E3EF1 /* main.m in Sources */,
 				2214DCF91B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m in Sources */,
 				EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */,
+				EFC809151F168F7900695E11 /* TOSMBCSessionWrapperCache.m in Sources */,
 				22CB5AEB1B78929B006F05F2 /* TORootViewController.m in Sources */,
 				2214DCFC1B66847B003E3EF1 /* TOSMBConstants.m in Sources */,
 			);
