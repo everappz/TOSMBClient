@@ -49,9 +49,6 @@ NSString *localizedStringForErrorCode(TOSMBSessionErrorCode errorCode)
     NSString *errorMessage;
     
     switch (errorCode) {
-        case TOSMBSessionErrorNotOnWiFi:
-            errorMessage = @"Device isn't connected to a local wireless network.";
-            break;
         case TOSMBSessionErrorCodeUnableToResolveAddress:
             errorMessage = @"Insufficient information to resolve device address.";
             break;

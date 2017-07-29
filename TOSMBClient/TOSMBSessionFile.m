@@ -25,7 +25,7 @@
 
 @interface TOSMBSessionFile ()
 
-@property (nonatomic, copy) NSString *filePath;
+@property (nonatomic, copy) NSString *fullPath;
 @property (nonatomic, assign) BOOL isShareRoot; /** If this item represents the root network share */
 @property (nonatomic, copy) NSString *name;
 @property (nonatomic, assign) uint64_t fileSize;
@@ -72,19 +72,21 @@
         _writeTimestamp = smb_stat_get(stat, SMB_STAT_WTIME);
         _modificationTime = [self dateFromLDAPTimeStamp:_modificationTimestamp];
         _creationTime = [self dateFromLDAPTimeStamp:_creationTimestamp];
-        _filePath = [[path stringByAppendingPathComponent:_name] copy];
+        _fullPath = [[path stringByAppendingPathComponent:_name] copy];
+        [self normalizeFullPath];
     }
     
     return self;
 }
 
-- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path{
+- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath {
     if (stat == NULL){
         return nil;
     }
-    if (self = [self initWithStat:stat parentDirectoryFilePath:path]) {
-        _name = [name copy];
-        _filePath = [[path stringByAppendingPathComponent:_name] copy];
+    if (self = [self initWithStat:stat parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]]) {
+        _name = [[fullPath lastPathComponent] copy];
+        _fullPath = [fullPath copy];
+        [self normalizeFullPath];
     }
     return self;
 }
@@ -99,9 +101,25 @@
         _fileSize = 0;
         _allocationSize = 0;
         _directory = YES;
-        _filePath = [[NSString stringWithFormat:@"//%@/", name] copy];
+        _fullPath = [[NSString stringWithFormat:@"/%@", name] copy];
+        [self normalizeFullPath];
     }
     return self;
+}
+
+- (void)normalizeFullPath{
+    
+    NSString *normalizedPath = _fullPath;
+    
+    if (normalizedPath.length == 0) {
+        normalizedPath = @"/";
+    }
+    
+    if ([normalizedPath characterAtIndex:normalizedPath.length - 1] != '/' && _directory) {
+        normalizedPath = [normalizedPath stringByAppendingString:@"/"];
+    }
+    
+    _fullPath = [normalizedPath copy];
 }
 
 //SO Answer by Dave DeLong - http://stackoverflow.com/a/11978614/599344

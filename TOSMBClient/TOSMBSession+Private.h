@@ -27,7 +27,6 @@
 @property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests */
 
 /* Connection/Authentication handling */
-- (BOOL)deviceIsOnWiFi;
 - (NSError *)attemptConnection;
 
 /* File path parsing */

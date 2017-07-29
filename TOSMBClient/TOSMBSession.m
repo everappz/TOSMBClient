@@ -32,7 +32,7 @@
 #import "TOSMBSessionUploadTask.h"
 #import "TOSMBCSessionWrapperCache.h"
 
-const NSTimeInterval kSessionTimeout = 60.0;
+const NSTimeInterval kSessionTimeout = 30.0;
 
 @interface TOSMBSessionDownloadTask ()
 
@@ -116,7 +116,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
 
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress{
     if (self = [self init]) {
-        if([TOHost isValidIPv4Address:hostNameOrIPaddress]){
+        if([TOHost isValidIPAddress:hostNameOrIPaddress]){
             self.ipAddress = hostNameOrIPaddress;
         }
         else{
@@ -148,28 +148,6 @@ const NSTimeInterval kSessionTimeout = 60.0;
 
 #pragma mark - Connections/Authentication -
 
-- (BOOL)deviceIsOnWiFi
-{
-    SCNetworkReachabilityRef reachability = SCNetworkReachabilityCreateWithName(NULL, "8.8.8.8");
-    SCNetworkReachabilityFlags flags;
-    BOOL success = SCNetworkReachabilityGetFlags(reachability, &flags);
-    CFRelease(reachability);
-    if (!success) {
-        return NO;
-    }
-    BOOL isReachable = ((flags & kSCNetworkReachabilityFlagsReachable) != 0);
-    BOOL needsConnection = ((flags & kSCNetworkReachabilityFlagsConnectionRequired) != 0);
-    BOOL isNetworkReachable = (isReachable && !needsConnection);
-    
-    if (!isNetworkReachable) {
-        return NO;
-    } else if ((flags & kSCNetworkReachabilityFlagsIsWWAN) != 0) {
-        return NO;
-    }
-    
-    return YES;
-}
-
 - (void)setLastRequestDate:(NSDate *)lastRequestDate{
     [self.dsm_session setLastRequestDate:lastRequestDate];
 }
@@ -195,11 +173,6 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         if(sessionValid==NO){
             return errorForErrorCode(TOSMBSessionErrorCodeUnableToConnect);
-        }
-        
-        //There's no point in attempting a potentially costly TCP attempt if we're not even on a local network.
-        if ([self deviceIsOnWiFi] == NO) {
-            return errorForErrorCode(TOSMBSessionErrorNotOnWiFi);
         }
         
         if (self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kSessionTimeout) {
@@ -232,9 +205,18 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 NSArray *addresses = [TOHost addressesForHostname:self.hostName];
                 NSString *ipAddress = nil;
                 for(NSString *address in addresses){
-                    if([TOHost isValidIPv4Address:address]){
+                    if([TOHost isValidIPv4Address:address]
+                       && [address isEqualToString:@"127.0.53.53"]==NO){
                         ipAddress = address;
                         break;
+                    }
+                }
+                if(ipAddress==nil){
+                    for(NSString *address in addresses){
+                        if([TOHost isValidIPv6Address:address]){
+                            ipAddress = address;
+                            break;
+                        }
                     }
                 }
                 self.ipAddress = ipAddress;
@@ -245,7 +227,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
             }
             
             if(self.ipAddress.length == 0 || self.hostName.length == 0){
-                TONetBIOSNameService *nameService = [[TONetBIOSNameService alloc] init];
+                TONetBIOSNameService *nameService = [TONetBIOSNameService sharedSerice];
                 if (self.ipAddress.length==0){
                     self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
                 }
@@ -265,15 +247,14 @@ const NSTimeInterval kSessionTimeout = 60.0;
         }
         
         //Convert the IP Address and hostname values to their C equivalents
-        struct in_addr addr;
-        inet_aton([self.ipAddress cStringUsingEncoding:NSASCIIStringEncoding], &addr);
-        const char *hostName = [self.hostName cStringUsingEncoding:NSUTF8StringEncoding];
+        const char *ip = [self.ipAddress cStringUsingEncoding:NSUTF8StringEncoding];
+        const char *hostName = [self.hostName cStringUsingEncoding:NSASCIIStringEncoding];
         
         //If the username or password wasn't supplied, a non-NULL string must still be supplied
         //to avoid NULL input assertions.   
-        const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "guest");
+        const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "GUEST");
         const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
-        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [self.hostName cStringUsingEncoding:NSUTF8StringEncoding]);
+        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [@"?" cStringUsingEncoding:NSUTF8StringEncoding]);
         
         NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
         NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
@@ -301,7 +282,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
                 __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
                 
                 [self.dsm_session inSMBSession:^(smb_session *session) {
-                    int result = smb_session_connect(session, hostName, addr.s_addr, SMB_TRANSPORT_TCP);
+                    int result = smb_session_connect(session, hostName, ip, SMB_TRANSPORT_TCP);
                     if (result != DSM_SUCCESS) {
                         errorCode = TOSMBSessionErrorCodeUnableToConnect;
                         return;
@@ -624,7 +605,12 @@ const NSTimeInterval kSessionTimeout = 60.0;
             }
         }
         else{
-            file = [[TOSMBSessionFile alloc] initWithName:path.lastPathComponent stat:stat parentDirectoryFilePath:[path stringByDeletingLastPathComponent]];
+            if([[path stringByDeletingLastPathComponent] isEqualToString:@"/"]){
+                file = [[TOSMBSessionFile alloc] initWithShareName:shareName];
+            }
+            else{
+                file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
+            }
             smb_stat_destroy(stat);
         }
         //smb_tree_disconnect(self.session, shareID);
@@ -871,6 +857,8 @@ const NSTimeInterval kSessionTimeout = 60.0;
         NSString *path = dirPath;
         path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
         
+        NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
+        
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
         relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
         relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
@@ -919,7 +907,7 @@ const NSTimeInterval kSessionTimeout = 60.0;
         smb_stat_list_destroy(statList);
         
         for(TOSMBSessionFile *dir in directories){
-            BOOL result = [self recursiveContentOfDirectoryAtPath:dir.filePath inShare:shareID items:items error:error];
+            BOOL result = [self recursiveContentOfDirectoryAtPath:dir.fullPath inShare:shareID items:items error:error];
             if(result==NO){
                 return NO;
             }
@@ -942,6 +930,9 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         NSString *path = dirPath;
         path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+        
+        NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
+        
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
         relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
         relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
@@ -977,6 +968,8 @@ const NSTimeInterval kSessionTimeout = 60.0;
         
         NSString *path = filePath;
         path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+        
+        NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
         
         NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
         relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
@@ -1067,10 +1060,10 @@ const NSTimeInterval kSessionTimeout = 60.0;
                             TOSMBSessionFile *file = [childItems objectAtIndex:index];
                             BOOL success = NO;
                             if(file.directory){
-                               success = [self deleteDirectoryAtPath:file.filePath inShare:shareID error:nil];
+                               success = [self deleteDirectoryAtPath:file.fullPath inShare:shareID error:nil];
                             }
                             else{
-                                success = [self deleteFileAtPath:file.filePath inShare:shareID error:nil];
+                                success = [self deleteFileAtPath:file.fullPath inShare:shareID error:nil];
                             }
                             if(success==NO){
                                 break;
@@ -1220,8 +1213,9 @@ const NSTimeInterval kSessionTimeout = 60.0;
         range = [path rangeOfString:@"\\"];
     }
     
-    if (range.location != NSNotFound)
+    if (range.location != NSNotFound){
         path = [path substringFromIndex:range.location+1];
+    }
     
     return path;
 }

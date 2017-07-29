@@ -59,7 +59,7 @@
 /* Download methods */
 - (void)setupDownloadOperation;
 - (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation;
-- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID;
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID;
 
 /* File Path Methods */
 - (NSString *)hashForFilePath;
@@ -284,7 +284,7 @@
 
 #pragma mark - Downloading -
 
-- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
     if(self.dsm_session!=NULL){
         __block smb_stat fileStat = NULL;
@@ -295,7 +295,7 @@
         if (fileStat==NULL){
             return nil;
         }
-        TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:filePath];
+        TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]];
         smb_stat_destroy(fileStat);
         return file;
     }
@@ -410,7 +410,7 @@
     formattedPath = [formattedPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
     
     //Get the file info we'll be working off
-    self.file = [self requestFileForItemAtPath:formattedPath inTree:treeID];
+    self.file = [self requestFileForItemAtFormattedPath:formattedPath fullPath:self.sourceFilePath inTree:treeID];
     if (self.file == nil) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
         cleanup();

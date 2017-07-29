@@ -29,7 +29,6 @@ typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
 {
     TOSMBSessionErrorCodeNone = 0,
     TOSMBSessionErrorCodeUnknown = 1,                               /* Error code was not specified. */
-    TOSMBSessionErrorNotOnWiFi = 1000,                              /* The device isn't presently connected to a local network. */
     TOSMBSessionErrorCodeUnableToResolveAddress = 1001,             /* Not enough connection information to resolve was supplied. */
     TOSMBSessionErrorCodeUnableToConnect = 1002,                    /* The connection attempt failed. */
     TOSMBSessionErrorCodeAuthenticationFailed = 1003,               /* The username/password failed (And guest login is not available) */

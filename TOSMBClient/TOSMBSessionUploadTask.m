@@ -42,7 +42,7 @@
 /* Download methods */
 - (void)setupUploadOperation;
 - (void)performUploadWithOperation:(__weak NSBlockOperation *)weakOperation;
-- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID;
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID;
 
 /* Feedback events sent to either the delegate or callback blocks */
 - (void)didSucceedWithFilePath:(NSString *)filePath;
@@ -137,7 +137,7 @@
 
 #pragma mark - Uploading -
 
-- (TOSMBSessionFile *)requestFileForItemAtPath:(NSString *)filePath inTree:(smb_tid)treeID{
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
     __block smb_stat fileStat = NULL;
     [self.dsm_session inSMBSession:^(smb_session *session) {
@@ -147,7 +147,7 @@
     if (fileStat==NULL){
         return nil;
     }
-    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:filePath];
+    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:[filePath stringByDeletingLastPathComponent]];
     smb_stat_destroy(fileStat);
     return file;
 }
@@ -395,7 +395,7 @@
     
     //---------------------------------------------------------------------------------------
     //Move the finished file to its destination
-    TOSMBSessionFile *existingFile = [self requestFileForItemAtPath:formattedPath inTree:treeID];
+    TOSMBSessionFile *existingFile = [self requestFileForItemAtFormattedPath:formattedPath fullPath:self.destinationFilePath inTree:treeID];
     if (existingFile){
         [self.dsm_session inSMBSession:^(smb_session *session) {
             smb_file_rm(session, treeID, relativeToPathCString);

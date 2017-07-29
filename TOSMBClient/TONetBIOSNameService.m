@@ -103,29 +103,42 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     return self;
 }
 
++ (instancetype)sharedSerice{
+    static dispatch_once_t onceToken;
+    static TONetBIOSNameService *shared;
+    dispatch_once(&onceToken, ^{
+        shared = [[TONetBIOSNameService alloc] init];
+    });
+    return shared;
+}
+
 - (void)dealloc
 {
     [self.operationQueue cancelAllOperations];
-    netbios_ns_destroy(self.nameService);
+    if(self.nameService!=NULL){
+        netbios_ns_destroy(self.nameService);
+    }
 }
 
 #pragma mark - Device Name / IP Resolution -
 - (NSString *)resolveIPAddressWithName:(NSString *)name type:(TONetBIOSNameServiceType)type
 {
-    if (name == nil)
-        return nil;
-    
-    struct in_addr addr;
-    int result = netbios_ns_resolve(self.nameService, [name cStringUsingEncoding:NSUTF8StringEncoding], TONetBIOSNameServiceCTypeForType(type), &addr.s_addr);
-    if (result < 0)
-        return nil;
-    
-    char *ipAddress = inet_ntoa(addr);
-    if (ipAddress == NULL) {
-        return nil;
+    @synchronized (self) {
+        if (name == nil)
+            return nil;
+        
+        struct in_addr addr;
+        int result = netbios_ns_resolve(self.nameService, [name cStringUsingEncoding:NSUTF8StringEncoding], TONetBIOSNameServiceCTypeForType(type), &addr.s_addr);
+        if (result < 0)
+            return nil;
+        
+        char *ipAddress = inet_ntoa(addr);
+        if (ipAddress == NULL) {
+            return nil;
+        }
+        
+        return [NSString stringWithCString:ipAddress encoding:NSUTF8StringEncoding];
     }
-    
-    return [NSString stringWithCString:ipAddress encoding:NSUTF8StringEncoding];
 }
 
 - (void)resolveIPAddressWithName:(NSString *)name type:(TONetBIOSNameServiceType)type
@@ -175,17 +188,19 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 
 - (NSString *)lookupNetworkNameForIPAddress:(NSString *)address
 {
-    if (address == nil)
-        return nil;
-    
-    struct in_addr  addr;
-    inet_aton([address cStringUsingEncoding:NSASCIIStringEncoding], &addr);
-    char *addressString = (char *)netbios_ns_inverse(self.nameService, addr.s_addr);
-    if (addressString == NULL) {
-        return nil;
+    @synchronized (self) {
+        if (address == nil)
+            return nil;
+        
+        struct in_addr  addr;
+        inet_aton([address cStringUsingEncoding:NSASCIIStringEncoding], &addr);
+        char *addressString = (char *)netbios_ns_inverse(self.nameService, addr.s_addr);
+        if (addressString == NULL) {
+            return nil;
+        }
+        
+        return [NSString stringWithCString:addressString encoding:NSUTF8StringEncoding];
     }
-    
-    return [NSString stringWithCString:addressString encoding:NSUTF8StringEncoding];
 }
 
 - (void)lookupNetworkNameForIPAddress:(NSString *)address success:(void (^)(NSString *))success failure:(void (^)(void))failure

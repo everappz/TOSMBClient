@@ -33,6 +33,8 @@ typedef void (^TONetBIOSNameServiceDiscoveryEvent)(TONetBIOSNameServiceEntry *en
 
 @interface TONetBIOSNameService : NSObject
 
++ (instancetype)sharedSerice;
+
 /** True when device discovery has been started */
 @property (nonatomic, readonly) BOOL discovering;
 

@@ -27,7 +27,7 @@
 
 @interface TOSMBSessionFile : NSObject
 
-@property (nonatomic, readonly, copy) NSString *filePath;         /** The filepath of this file, excluding the share name. */
+@property (nonatomic, readonly, copy) NSString *fullPath;         /** The full filepath of this file, including the share name. */
 @property (nonatomic, readonly) BOOL directory;             /** Whether this file is a directory or not */
 @property (nonatomic, readonly, copy) NSString *name;             /** The name of the file */
 @property (nonatomic, readonly) uint64_t fileSize;         /** The file size, in bytes of this folder (0 if it's a folder) */
@@ -52,8 +52,8 @@
  * @param name The name of the share
  * @param session The session in which this item belongs to
  */
-- (instancetype)initWithShareName:(NSString *)name ;
+- (instancetype)initWithShareName:(NSString *)name;
 
-- (instancetype)initWithName:(NSString *)name stat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path;
+- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath;
 
 @end

@@ -19,36 +19,11 @@
 
 + (NSArray *)hostnamesForAddress:(NSString *)address;
 
-+ (NSArray *)ipAddresses;
-
-+ (NSArray *)ethernetAddresses;
-
 + (BOOL)isValidIPv4Address:(NSString *)addressString;
 
 + (BOOL)isValidIPv6Address:(NSString *)addressString;
 
 + (BOOL)isValidIPAddress:(NSString *)addressString;
 
-#pragma mark Class IP and Host Utilities
-
-+ (NSString *) stringFromAddress: (const struct sockaddr *) address;
-
-+ (BOOL)addressFromString:(NSString *)IPAddress address:(struct sockaddr_in *)address;
-
-+ (NSString *) addressFromData:(NSData *) addressData;
-
-+ (NSString *) portFromData:(NSData *) addressData;
-
-+ (NSData *) dataFromAddress: (struct sockaddr_in) address;
-
-- (NSString *) hostname;
-
-- (NSString *) getIPAddressForHost: (NSString *) theHost;
-
-- (NSString *) localIPAddress;
-- (NSString *) localWiFiIPAddress;
-+ (NSArray *) localWiFiIPAddresses;
-
-- (NSString *) whatismyipdotcom;
 
 @end
