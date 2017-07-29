@@ -197,13 +197,8 @@
     
     self.uploadTemporaryFilePath = [[self.destinationFilePath stringByDeletingLastPathComponent] stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.%@",[[self class] uuidString],self.destinationFilePath.pathExtension?:@"tmp"]];
     
-    NSString *formattedUploadPath = [self.sessionObject filePathExcludingSharePathFromPath:self.uploadTemporaryFilePath];
-    formattedUploadPath = [NSString stringWithFormat:@"\\%@",formattedUploadPath];
-    formattedUploadPath = [formattedUploadPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-    
-    NSString *formattedPath = [self.sessionObject filePathExcludingSharePathFromPath:self.destinationFilePath];
-    formattedPath = [NSString stringWithFormat:@"\\%@",formattedPath];
-    formattedPath = [formattedPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    NSString *formattedUploadPath = [self.sessionObject relativeSMBPathFromPath:self.uploadTemporaryFilePath];
+    NSString *formattedPath = [self.sessionObject relativeSMBPathFromPath:self.destinationFilePath];
     
     const char *relativeUploadPathCString = [formattedUploadPath cStringUsingEncoding:NSUTF8StringEncoding];
     const char *relativeToPathCString = [formattedPath cStringUsingEncoding:NSUTF8StringEncoding];

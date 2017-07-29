@@ -32,6 +32,7 @@
 /* File path parsing */
 - (NSString *)shareNameFromPath:(NSString *)path;
 - (NSString *)filePathExcludingSharePathFromPath:(NSString *)path;
+- (NSString *)relativeSMBPathFromPath:(NSString *)path;
 
 /* Asynchronous operation management */
 - (void)setupDataQueue;

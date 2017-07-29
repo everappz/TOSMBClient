@@ -161,7 +161,104 @@ const NSTimeInterval kSessionTimeout = 30.0;
     self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
 }
 
+
+- (NSError *)attemptConnectionToAddress:(NSString *)ipaddr{
+
+    self.ipAddress = ipaddr;
+    
+    if(self.hostName.length==0){
+        self.hostName = [TOHost hostnameForAddress:self.ipAddress];
+    }
+    
+    //If only one piece of information was supplied, use NetBIOS to resolve the other
+    if(self.ipAddress.length == 0 || self.hostName.length == 0){
+        TONetBIOSNameService *nameService = [TONetBIOSNameService sharedService];
+        if (self.ipAddress.length==0){
+            self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
+        }
+        if(self.hostName.length==0){
+            self.hostName = [nameService lookupNetworkNameForIPAddress:self.ipAddress];
+        }
+    }
+    
+    //If there is STILL no IP address after the resolution, there's no chance of a successful connection
+    if (self.ipAddress == nil) {
+        return errorForErrorCode(TOSMBSessionErrorCodeUnableToResolveAddress);
+    }
+    
+    if(self.hostName==nil){
+        self.hostName = @"";
+    }
+    
+    //Convert the IP Address and hostname values to their C equivalents
+    const char *ip = [self.ipAddress cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *hostName = [self.hostName cStringUsingEncoding:NSASCIIStringEncoding];
+    
+    //If the username or password wasn't supplied, a non-NULL string must still be supplied
+    //to avoid NULL input assertions.
+    const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "GUEST");
+    const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
+    const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [@"?" cStringUsingEncoding:NSUTF8StringEncoding]);
+    
+    NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
+    NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
+    NSString *dsm_session_password = [NSString stringWithUTF8String:password];
+    
+    //@synchronized ([TOSMBCSessionWrapperCache sharedCache]) {
+    
+    /*
+     TOSMBCSessionWrapper *cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
+     
+     if(cachedSession!=nil){
+     self.dsm_session = cachedSession;
+     self.lastRequestDate = [NSDate date];
+     }
+     else
+     */{
+         
+         self.dsm_session.ipAddress = self.ipAddress;
+         self.dsm_session.domain = dsm_session_domain;
+         self.dsm_session.userName = dsm_session_userName;
+         self.dsm_session.password = dsm_session_password;
+         
+         //Attempt a connection
+         __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
+         
+         [self.dsm_session inSMBSession:^(smb_session *session) {
+
+             int result = smb_session_connect(session, hostName, ip, SMB_TRANSPORT_TCP);
+             if (result != DSM_SUCCESS) {
+                 errorCode = TOSMBSessionErrorCodeUnableToConnect;
+                 return;
+             }
+             
+             //Attempt a login. Even if we're downgraded to guest, the login call will succeed
+             smb_session_set_creds(session, domain, userName, password);
+             if (smb_session_login(session) != DSM_SUCCESS) {
+                 errorCode = TOSMBSessionErrorCodeAuthenticationFailed;
+                 return;
+             }
+             
+             self.guest = smb_session_is_guest(session);
+         }];
+         
+         if(errorCode!=TOSMBSessionErrorCodeNone){
+             return errorForErrorCode(errorCode);
+         }
+         //else{
+         //    [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
+         //}
+         
+     }
+    
+    self.connected = YES;
+    //}
+    
+    return nil;
+}
+
 - (NSError *)attemptConnection{
+    
     @synchronized(self) {
         
         __block BOOL sessionValid = YES;
@@ -198,118 +295,35 @@ const NSTimeInterval kSessionTimeout = 30.0;
             return errorForErrorCode(TOSMBSessionErrorCodeUnableToResolveAddress);
         }
         
-        //If only one piece of information was supplied, use NetBIOS to resolve the other
-        if (self.ipAddress.length == 0 || self.hostName.length == 0) {
-            
-            if(self.ipAddress.length==0){
-                NSArray *addresses = [TOHost addressesForHostname:self.hostName];
-                NSString *ipAddress = nil;
-                for(NSString *address in addresses){
-                    if([TOHost isValidIPv4Address:address]
-                       && [address isEqualToString:@"127.0.53.53"]==NO){
-                        ipAddress = address;
-                        break;
-                    }
-                }
-                if(ipAddress==nil){
-                    for(NSString *address in addresses){
-                        if([TOHost isValidIPv6Address:address]){
-                            ipAddress = address;
-                            break;
-                        }
-                    }
-                }
-                self.ipAddress = ipAddress;
-            }
-            
-            if(self.hostName.length==0){
-                self.hostName = [TOHost hostnameForAddress:self.ipAddress];
-            }
-            
-            if(self.ipAddress.length == 0 || self.hostName.length == 0){
-                TONetBIOSNameService *nameService = [TONetBIOSNameService sharedSerice];
-                if (self.ipAddress.length==0){
-                    self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
-                }
-                if(self.hostName.length==0){
-                    self.hostName = [nameService lookupNetworkNameForIPAddress:self.ipAddress];
+        if(self.ipAddress.length==0){
+            NSMutableArray *addressesForHost = [[NSMutableArray alloc] init];
+            NSArray *addresses = [TOHost addressesForHostname:self.hostName];
+            for(NSString *addr in addresses){
+                if([TOHost isValidIPAddress:addr] &&
+                   [addr isEqualToString:@"127.0.53.53"]==NO){
+                    [addressesForHost addObject:addr];
                 }
             }
-        }
-        
-        //If there is STILL no IP address after the resolution, there's no chance of a successful connection
-        if (self.ipAddress == nil) {
-            return errorForErrorCode(TOSMBSessionErrorCodeUnableToResolveAddress);
-        }
-        
-        if(self.hostName==nil){
-            self.hostName = @"";
-        }
-        
-        //Convert the IP Address and hostname values to their C equivalents
-        const char *ip = [self.ipAddress cStringUsingEncoding:NSUTF8StringEncoding];
-        const char *hostName = [self.hostName cStringUsingEncoding:NSASCIIStringEncoding];
-        
-        //If the username or password wasn't supplied, a non-NULL string must still be supplied
-        //to avoid NULL input assertions.   
-        const char *userName = (self.userName.length>0 ? [self.userName cStringUsingEncoding:NSUTF8StringEncoding] : "GUEST");
-        const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
-        const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [@"?" cStringUsingEncoding:NSUTF8StringEncoding]);
-        
-        NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
-        NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
-        NSString *dsm_session_password = [NSString stringWithUTF8String:password];
-        
-        //@synchronized ([TOSMBCSessionWrapperCache sharedCache]) {
-        
-        /*
-            TOSMBCSessionWrapper *cachedSession = [[TOSMBCSessionWrapperCache sharedCache] sessionForKey:[TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress domain:dsm_session_domain userName:dsm_session_userName password:dsm_session_password]];
-            
-            if(cachedSession!=nil){
-                self.dsm_session = cachedSession;
-                self.lastRequestDate = [NSDate date];
-            }
-            else
-         */{
-                
-                self.dsm_session.ipAddress = self.ipAddress;
-                self.dsm_session.domain = dsm_session_domain;
-                self.dsm_session.userName = dsm_session_userName;
-                self.dsm_session.password = dsm_session_password;
-                
-                //Attempt a connection
 
-                __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
-                
-                [self.dsm_session inSMBSession:^(smb_session *session) {
-                    int result = smb_session_connect(session, hostName, ip, SMB_TRANSPORT_TCP);
-                    if (result != DSM_SUCCESS) {
-                        errorCode = TOSMBSessionErrorCodeUnableToConnect;
-                        return;
-                    }
-                    
-                    //Attempt a login. Even if we're downgraded to guest, the login call will succeed
-                    smb_session_set_creds(session, domain, userName, password);
-                    if (smb_session_login(session) != DSM_SUCCESS) {
-                        errorCode = TOSMBSessionErrorCodeAuthenticationFailed;
-                        return;
-                    }
-                    
-                    self.guest = smb_session_is_guest(session);
-                }];
-                
-                if(errorCode!=TOSMBSessionErrorCodeNone){
-                     return errorForErrorCode(errorCode);
-                }
-                //else{
-                //    [[TOSMBCSessionWrapperCache sharedCache] cacheSession:self.dsm_session];
-                //}
-                
-            }
+            __block NSError *connectToIPError = nil;
             
-            self.connected = YES;
-        //}
-
+            NSArray *resultArr = [addressesForHost sortedArrayUsingComparator:^NSComparisonResult(id  _Nonnull obj1, id  _Nonnull obj2) {
+                return [@([obj1 length]) compare:@([obj2 length])];
+            }];
+            [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                connectToIPError = [self attemptConnectionToAddress:obj];
+                if(self.connected){
+                    *stop = YES;
+                }
+            }];
+            
+            return connectToIPError;
+            
+        }
+        else{
+            [self attemptConnectionToAddress:self.ipAddress];
+        }
+        
         return nil;
     }
 }
@@ -408,11 +422,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
         }
         
         //work out the remainder of the file path and create the search query
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        //prepend double backslashes
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        //replace any additional forward slashes with backslashes
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         //append double backslash if we don't have one
         if (![[relativePath substringFromIndex:relativePath.length-1] isEqualToString:@"\\"]){
             relativePath = [relativePath stringByAppendingString:@"\\"];
@@ -587,11 +597,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
         }
         
         //work out the remainder of the file path and create the search query
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        //prepend double backslashes
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        //replace any additional forward slashes with backslashes
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         
         __block smb_stat stat = NULL;
         [self.dsm_session inSMBSession:^(smb_session *session) {
@@ -691,13 +697,8 @@ const NSTimeInterval kSessionTimeout = 30.0;
             return NO;
         }
         
-        NSString *relativeFromPath = [self filePathExcludingSharePathFromPath:fromPath];
-        relativeFromPath = [NSString stringWithFormat:@"\\%@",relativeFromPath];
-        relativeFromPath = [relativeFromPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-        
-        NSString *relativeToPath = [self filePathExcludingSharePathFromPath:toPath];
-        relativeToPath = [NSString stringWithFormat:@"\\%@",relativeToPath];
-        relativeToPath = [relativeToPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+        NSString *relativeFromPath = [self relativeSMBPathFromPath:fromPath];
+        NSString *relativeToPath = [self relativeSMBPathFromPath:toPath];
         
         const char *relativeFromPathCString = [relativeFromPath cStringUsingEncoding:NSUTF8StringEncoding];
         const char *relativeToPathCString = [relativeToPath cStringUsingEncoding:NSUTF8StringEncoding];
@@ -786,10 +787,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
             return NO;
         }
         
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-        
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
 
         __block int result = DSM_ERROR_GENERIC;
@@ -859,9 +857,8 @@ const NSTimeInterval kSessionTimeout = 30.0;
         
         NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
         
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
+        //append double backslash if we don't have one
         if (![[relativePath substringFromIndex:relativePath.length-1] isEqualToString:@"\\"]){
             relativePath = [relativePath stringByAppendingString:@"\\"];
         }
@@ -933,10 +930,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
         
         NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
         
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-        
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
         
         __block int result = DSM_ERROR_GENERIC;
@@ -971,10 +965,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
         
         NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
         
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-        
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
         
         __block int result = DSM_ERROR_GENERIC;
@@ -1027,10 +1018,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
             return NO;
         }
         
-        NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
-        relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-        relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
-        
+        NSString *relativePath = [self relativeSMBPathFromPath:path];
         const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
         
         __block smb_stat stat = NULL;
@@ -1217,7 +1205,24 @@ const NSTimeInterval kSessionTimeout = 30.0;
         path = [path substringFromIndex:range.location+1];
     }
     
+    if ([path length] > 1 && [path hasSuffix:@"/"]) {
+        return [path substringToIndex:[path length] - 1];
+    }
+    
     return path;
 }
+
+
+- (NSString *)relativeSMBPathFromPath:(NSString *)path
+{
+    //work out the remainder of the file path and create the search query
+    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    //prepend double backslashes
+    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
+    //replace any additional forward slashes with backslashes
+    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
+    return relativePath;
+}
+
 
 @end

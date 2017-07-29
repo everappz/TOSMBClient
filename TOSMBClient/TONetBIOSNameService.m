@@ -103,7 +103,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     return self;
 }
 
-+ (instancetype)sharedSerice{
++ (instancetype)sharedService{
     static dispatch_once_t onceToken;
     static TONetBIOSNameService *shared;
     dispatch_once(&onceToken, ^{

@@ -31,7 +31,8 @@
         return nil;
 }
 
-+ (NSArray *)addressesForHostname:(NSString *)hostname {
+
++ (NSArray *)unixAddressesForHostname:(NSString *)hostname {
     if (hostname.length == 0) {
         return nil;
     }
@@ -57,6 +58,41 @@
         }
     }
     return addArray;
+}
+
++ (NSArray *)addressesForHostname:(NSString *)hostname {
+    
+    // Get the addresses for the given hostname.
+    CFHostRef hostRef = CFHostCreateWithName(kCFAllocatorDefault, (__bridge CFStringRef)hostname);
+    BOOL isSuccess = CFHostStartInfoResolution(hostRef, kCFHostAddresses, nil);
+    if (!isSuccess){
+        CFRelease(hostRef);
+        return nil;
+    }
+    CFArrayRef addressesRef = CFHostGetAddressing(hostRef, nil);
+    if (addressesRef == nil){
+        CFRelease(hostRef);
+        return nil;
+    }
+    
+    // Convert these addresses into strings.
+    char ipAddress[INET6_ADDRSTRLEN];
+    NSMutableArray *addresses = [[NSMutableArray alloc] init];
+    CFIndex numAddresses = CFArrayGetCount(addressesRef);
+    for (CFIndex currentIndex = 0; currentIndex < numAddresses; currentIndex++) {
+        struct sockaddr *address = (struct sockaddr *)CFDataGetBytePtr(CFArrayGetValueAtIndex(addressesRef, currentIndex));
+        if (address == nil){
+            CFRelease(hostRef);
+            return nil;
+        };
+        getnameinfo(address, address->sa_len, ipAddress, INET6_ADDRSTRLEN, nil, 0, NI_NUMERICHOST);
+        NSString *str = [NSString stringWithCString:ipAddress encoding:NSASCIIStringEncoding];
+        if(str){
+            [addresses addObject:str];
+        }
+    }
+    CFRelease(hostRef);
+    return addresses;
 }
 
 + (NSString *)hostnameForAddress:(NSString *)address {

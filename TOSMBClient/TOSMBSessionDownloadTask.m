@@ -405,9 +405,7 @@
     //---------------------------------------------------------------------------------------
     //Find the target file
     
-    NSString *formattedPath = [self.sessionObject filePathExcludingSharePathFromPath:self.sourceFilePath];
-    formattedPath = [NSString stringWithFormat:@"\\%@",formattedPath];
-    formattedPath = [formattedPath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"];
+    NSString *formattedPath = [self.sessionObject relativeSMBPathFromPath:self.sourceFilePath];
     
     //Get the file info we'll be working off
     self.file = [self requestFileForItemAtFormattedPath:formattedPath fullPath:self.sourceFilePath inTree:treeID];
