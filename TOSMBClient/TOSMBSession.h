@@ -34,6 +34,7 @@ extern const NSTimeInterval kSessionTimeout;
 
 @property (nonatomic, copy) NSString *hostName;
 @property (nonatomic, copy) NSString *ipAddress;
+@property (nonatomic, copy) NSString *port;
 
 @property (nonatomic, copy) NSString *userName;
 @property (nonatomic, copy) NSString *password;
@@ -55,10 +56,10 @@ extern const NSTimeInterval kSessionTimeout;
  @return A new instance of a session object
  
  */
-- (instancetype)initWithHostName:(NSString *)name;
-- (instancetype)initWithIPAddress:(NSString *)address;
-- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress;
-- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress;
+- (instancetype)initWithHostName:(NSString *)name port:(NSString *)port;
+- (instancetype)initWithIPAddress:(NSString *)address port:(NSString *)port;
+- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress port:(NSString *)port;
+- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress port:(NSString *)port;
 
 /**
  Sets both the username and password for this login session. This should be set before any

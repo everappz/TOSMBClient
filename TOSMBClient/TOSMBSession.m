@@ -92,29 +92,32 @@ const NSTimeInterval kSessionTimeout = 30.0;
     return self;
 }
 
-- (instancetype)initWithHostName:(NSString *)name{
+- (instancetype)initWithHostName:(NSString *)name port:(NSString *)port{
     if (self = [self init]) {
         self.hostName = name;
+        self.port = port;
     }
     return self;
 }
 
-- (instancetype)initWithIPAddress:(NSString *)address{
+- (instancetype)initWithIPAddress:(NSString *)address port:(NSString *)port{
     if (self = [self init]) {
         self.ipAddress = address;
+        self.port = port;
     }
     return self;
 }
 
-- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress{
+- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress port:(NSString *)port{
     if (self = [self init]) {
         self.hostName = name;
         self.ipAddress = ipAddress;
+        self.port = port;
     }
     return self;
 }
 
-- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress{
+- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress port:(NSString *)port{
     if (self = [self init]) {
         if([TOHost isValidIPAddress:hostNameOrIPaddress]){
             self.ipAddress = hostNameOrIPaddress;
@@ -122,6 +125,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
         else{
             self.hostName = hostNameOrIPaddress;
         }
+        self.port = port;
     }
     return self;
 }
@@ -162,7 +166,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 }
 
 
-- (NSError *)attemptConnectionToAddress:(NSString *)ipaddr{
+- (NSError *)attemptConnectionToAddress:(NSString *)ipaddr port:(NSString *)port transport:(int)transport{
 
     self.ipAddress = ipaddr;
     
@@ -193,6 +197,10 @@ const NSTimeInterval kSessionTimeout = 30.0;
     //Convert the IP Address and hostname values to their C equivalents
     const char *ip = [self.ipAddress cStringUsingEncoding:NSUTF8StringEncoding];
     const char *hostName = [self.hostName cStringUsingEncoding:NSASCIIStringEncoding];
+    const char *user_port = NULL;
+    if(port.length>0){
+        user_port = [port cStringUsingEncoding:NSUTF8StringEncoding];
+    }
     
     //If the username or password wasn't supplied, a non-NULL string must still be supplied
     //to avoid NULL input assertions.
@@ -226,7 +234,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
          
          [self.dsm_session inSMBSession:^(smb_session *session) {
 
-             int result = smb_session_connect(session, hostName, ip, SMB_TRANSPORT_TCP);
+             int result = smb_session_connect(session, hostName, ip, user_port, transport);
              if (result != DSM_SUCCESS) {
                  errorCode = TOSMBSessionErrorCodeUnableToConnect;
                  return;
@@ -311,17 +319,27 @@ const NSTimeInterval kSessionTimeout = 30.0;
                 return [@([obj1 length]) compare:@([obj2 length])];
             }];
             [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
-                connectToIPError = [self attemptConnectionToAddress:obj];
+                connectToIPError = [self attemptConnectionToAddress:obj port:self.port transport:SMB_TRANSPORT_TCP];
                 if(self.connected){
                     *stop = YES;
                 }
             }];
             
+            if(self.connected==NO){
+                [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                    connectToIPError = [self attemptConnectionToAddress:obj port:self.port transport:SMB_TRANSPORT_NBT];
+                    if(self.connected){
+                        *stop = YES;
+                    }
+                }];
+            }
             return connectToIPError;
-            
         }
         else{
-            [self attemptConnectionToAddress:self.ipAddress];
+            [self attemptConnectionToAddress:self.ipAddress port:self.port transport:SMB_TRANSPORT_TCP];
+            if(self.connected==NO){
+                [self attemptConnectionToAddress:self.ipAddress port:self.port transport:SMB_TRANSPORT_NBT];
+            }
         }
         
         return nil;
