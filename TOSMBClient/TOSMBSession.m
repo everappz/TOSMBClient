@@ -318,6 +318,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
             NSArray *resultArr = [addressesForHost sortedArrayUsingComparator:^NSComparisonResult(id  _Nonnull obj1, id  _Nonnull obj2) {
                 return [@([obj1 length]) compare:@([obj2 length])];
             }];
+
             [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
                 connectToIPError = [self attemptConnectionToAddress:obj port:self.port transport:SMB_TRANSPORT_TCP];
                 if(self.connected){
