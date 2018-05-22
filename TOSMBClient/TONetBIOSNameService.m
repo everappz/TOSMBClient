@@ -91,16 +91,30 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 #pragma mark - Class Implementation -
 @implementation TONetBIOSNameService
 
-- (instancetype)init
-{
+- (instancetype)init{
     if (self = [super init]) {
-        _nameService = netbios_ns_new();
-        if (_nameService == NULL) {
+        _nameService=NULL;
+        [self nameService];
+        if(_nameService==NULL){
+            NSParameterAssert(NO);
             return nil;
         }
     }
-    
     return self;
+}
+
+- (netbios_ns *)nameService{
+    if(_nameService==NULL){
+         _nameService = netbios_ns_new();
+    }
+    return _nameService;
+}
+
+- (void)destroyNameService{
+    if(_nameService!=NULL){
+        netbios_ns_destroy(_nameService);
+        _nameService = NULL;
+    }
 }
 
 + (instancetype)sharedService{
@@ -112,39 +126,33 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     return shared;
 }
 
-- (void)dealloc
-{
+- (void)dealloc{
     [self.operationQueue cancelAllOperations];
-    if(self.nameService!=NULL){
-        netbios_ns_destroy(self.nameService);
-    }
+    [self destroyNameService];
 }
 
 #pragma mark - Device Name / IP Resolution -
-- (NSString *)resolveIPAddressWithName:(NSString *)name type:(TONetBIOSNameServiceType)type
-{
+- (NSString *)resolveIPAddressWithName:(NSString *)name type:(TONetBIOSNameServiceType)type{
     @synchronized (self) {
-        if (name == nil)
+        if (name == nil){
             return nil;
-        
+        }
         struct in_addr addr;
         int result = netbios_ns_resolve(self.nameService, [name cStringUsingEncoding:NSUTF8StringEncoding], TONetBIOSNameServiceCTypeForType(type), &addr.s_addr);
-        if (result < 0)
+        if (result < 0){
             return nil;
-        
+        }
         char *ipAddress = inet_ntoa(addr);
         if (ipAddress == NULL) {
             return nil;
         }
-        
         return [NSString stringWithCString:ipAddress encoding:NSUTF8StringEncoding];
     }
 }
 
 - (void)resolveIPAddressWithName:(NSString *)name type:(TONetBIOSNameServiceType)type
                          success:(void (^)(NSString *ipAddress))success
-                         failure:(void (^)(void))failure
-{
+                         failure:(void (^)(void))failure{
     if (name == nil) {
         if (failure)
             failure();
@@ -232,7 +240,6 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
             if (failure) {
                 [[NSOperationQueue mainQueue] addOperationWithBlock:^{ failure(); }];
             }
-            
             return;
         }
         
@@ -247,19 +254,18 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 }
 
 #pragma mark - Operation Queue Management -
-- (void)setupOperationQueue
-{
-    if (self.operationQueue)
+- (void)setupOperationQueue{
+    if (self.operationQueue){
         return;
-    
+    }
     self.operationQueue = [[NSOperationQueue alloc] init];
 }
 
 #pragma mark - Network Device Name Discovery -
 - (BOOL)startDiscoveryWithTimeOut:(NSTimeInterval)timeout
                             added:(TONetBIOSNameServiceDiscoveryEvent)addedHandler
-                          removed:(TONetBIOSNameServiceDiscoveryEvent)removedHandler
-{
+                          removed:(TONetBIOSNameServiceDiscoveryEvent)removedHandler{
+    
     if (self.discovering) {
         [self stopDiscovery];
     }
@@ -280,14 +286,12 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     return netbios_ns_discover_start(self.nameService, (unsigned int)timeout, &callbacks);
 }
 
-- (BOOL)stopDiscovery
-{
+- (BOOL)stopDiscovery{
     self.discovering = NO;
     self.discoveryAddedEvent = nil;
     self.discoveryRemovedEvent = nil;
-    
     BOOL result = netbios_ns_discover_stop(self.nameService);
-    netbios_ns_destroy(self.nameService);
+    [self destroyNameService];
     return result;
 }
 
