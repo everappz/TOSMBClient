@@ -286,7 +286,9 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     self.discoveryAddedEvent = nil;
     self.discoveryRemovedEvent = nil;
     
-    return netbios_ns_discover_stop(self.nameService);
+    BOOL result = netbios_ns_discover_stop(self.nameService);
+    netbios_ns_destroy(self.nameService);
+    return result;
 }
 
 @end
