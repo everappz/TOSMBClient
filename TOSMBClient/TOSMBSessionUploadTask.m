@@ -205,14 +205,15 @@
     
     //---------------------------------------------------------------------------------------
     //Set up a cleanup block that'll release any handles before cancellation
+    WEAK_SELF();
     void (^cleanup)(void) = ^{
         if (fileID>0){
-            [self.dsm_session inSMBSession:^(smb_session *session) {
+            [weakSelf.dsm_session inSMBSession:^(smb_session *session) {
                smb_fclose(session, fileID);
             }];
         }
         if (treeID>0){
-            [self.dsm_session inSMBSession:^(smb_session *session) {
+            [weakSelf.dsm_session inSMBSession:^(smb_session *session) {
                  smb_file_rm(session, treeID, relativeUploadPathCString);
             }];
             //smb_tree_disconnect(self.session, treeID);
@@ -320,57 +321,61 @@
     BOOL uploadError = NO;
     NSInteger dataLength = 0;
     
-    do {
-        
-        @try{[fileHandle seekToFileOffset:self.countOfBytesSend];}@catch(NSException *exc){}
-        
-        NSData *data = nil;
-        @try {
-            data =  [fileHandle readDataOfLength:bufferSize];
-        }
-        @catch (NSException *exception) {
-            uploadError = YES;
-        }
-        dataLength = data.length;
-        NSInteger bytesToWrite = dataLength;
-        
-        if(bytesToWrite>0){
+    @autoreleasepool{
+    
+        do {
             
-            void *bytes = (void *)data.bytes;
-            while (bytesToWrite > 0) {
-                __block ssize_t r = -1;
-                [self.dsm_session inSMBSession:^(smb_session *session) {
-                    r = smb_fwrite(session, fileID, bytes, bytesToWrite);
-                }];
+            @try{[fileHandle seekToFileOffset:self.countOfBytesSend];}@catch(NSException *exc){}
+            
+            NSData *data = nil;
+            @try {
+                data =  [fileHandle readDataOfLength:bufferSize];
+            }
+            @catch (NSException *exception) {
+                uploadError = YES;
+            }
+            dataLength = data.length;
+            NSInteger bytesToWrite = dataLength;
+            
+            if(bytesToWrite>0){
                 
-                if (r == 0){
-                    break;
+                void *bytes = (void *)data.bytes;
+                while (bytesToWrite > 0) {
+                    __block ssize_t r = -1;
+                    [self.dsm_session inSMBSession:^(smb_session *session) {
+                        r = smb_fwrite(session, fileID, bytes, bytesToWrite);
+                    }];
+                    
+                    if (r == 0){
+                        break;
+                    }
+                    
+                    if (r < 0) {
+                        uploadError = YES;
+                        break;
+                    }
+                    bytesToWrite -= r;
+                    bytes += r;
                 }
                 
-                if (r < 0) {
-                    uploadError = YES;
-                    break;
-                }
-                bytesToWrite -= r;
-                bytes += r;
+            }
+
+            if (weakOperation.isCancelled){
+                break;
             }
             
-        }
-
-        if (weakOperation.isCancelled){
-            break;
-        }
-        
-        if(uploadError){
-            [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
-            break;
-        }
-        
-        self.countOfBytesSend += dataLength;
-        
-        [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesSend totalBytesExpected:self.countOfBytesExpectedToSend];
-        
-    } while (dataLength>0 && (uploadError!=YES));
+            if(uploadError){
+                [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
+                break;
+            }
+            
+            self.countOfBytesSend += dataLength;
+            
+            [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesSend totalBytesExpected:self.countOfBytesExpectedToSend];
+            
+        } while (dataLength>0 && (uploadError!=YES));
+    
+    }
     
     @try{
         [fileHandle closeFile];

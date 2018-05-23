@@ -198,8 +198,9 @@
     }
     [self.downloadOperation cancel];
     self.downloadOperation = nil;
+    WEAK_SELF();
     id deleteBlock = ^{
-        [[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];
+        [[NSFileManager defaultManager] removeItemAtPath:weakSelf.tempFilePath error:nil];
     };
     NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
     [deleteOperation addExecutionBlock:deleteBlock];
@@ -234,7 +235,7 @@
 
 - (void)didSucceedWithFilePath:(NSString *)filePath{
     
-    __weak typeof (self) weakSelf = self;
+    WEAK_SELF();
     
     [self.sessionObject performCallBackWithBlock:^{
         if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)]){
@@ -249,7 +250,7 @@
 
 - (void)didFailWithError:(NSError *)error{
 
-    __weak typeof (self) weakSelf = self;
+    WEAK_SELF();
     
     [self.sessionObject performCallBackWithBlock:^{
         if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)]){
@@ -262,7 +263,7 @@
 }
 
 - (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
-    __weak typeof (self) weakSelf = self;
+    WEAK_SELF();
     [self.sessionObject performCallBackWithBlock:^{
         if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
             [weakSelf.delegate downloadTask:weakSelf didWriteBytes:bytesWritten totalBytesReceived:weakSelf.countOfBytesReceived totalBytesExpectedToReceive:weakSelf.countOfBytesExpectedToReceive];
@@ -274,7 +275,7 @@
 }
 
 - (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
-    __weak typeof (self) weakSelf = self;
+    WEAK_SELF();
     [self.sessionObject performCallBackWithBlock:^{
         if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)]){
             [weakSelf.delegate downloadTask:weakSelf didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
@@ -336,16 +337,17 @@
     
     //---------------------------------------------------------------------------------------
     //Set up a cleanup block that'll release any handles before cancellation
+    WEAK_SELF();
     void (^cleanup)(void) = ^{
         
         //Release the background task handler, making the app eligible to be suspended now
-        if (self.backgroundTaskIdentifier){
-            [[UIApplication sharedApplication] endBackgroundTask:self.backgroundTaskIdentifier];
-            self.backgroundTaskIdentifier = 0;
+        if (weakSelf.backgroundTaskIdentifier){
+            [[UIApplication sharedApplication] endBackgroundTask:weakSelf.backgroundTaskIdentifier];
+            weakSelf.backgroundTaskIdentifier = 0;
         }
         
         if (fileID){
-            [self.dsm_session inSMBSession:^(smb_session *session) {
+            [weakSelf.dsm_session inSMBSession:^(smb_session *session) {
                 smb_fclose(session, fileID);
             }];
         }
@@ -480,36 +482,37 @@
     NSInteger bufferSize = 32768;
     char *buffer = malloc(bufferSize);
     
-    do {
-        @autoreleasepool {
+    @autoreleasepool {
+        do {
+     
+                [self.dsm_session inSMBSession:^(smb_session *session) {
+                    bytesRead = smb_fread(session, fileID, buffer, bufferSize);
+                }];
             
-            [self.dsm_session inSMBSession:^(smb_session *session) {
-                bytesRead = smb_fread(session, fileID, buffer, bufferSize);
-            }];
+                if (bytesRead < 0) {
+                    [self fail];
+                    [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
+                    break;
+                }
+
+                //Save them to the file handle (And ensure the NSData object is flushed immediately)
+                NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
+                @try {
+                    [fileHandle writeData:data];
+                    
+                    //Ensure the data is properly written to disk before proceeding
+                    [fileHandle synchronizeFile];
+                } @catch (NSException *exception) {}
+
+                if (weakOperation.isCancelled){
+                    break;
+                }
+                self.countOfBytesReceived += bytesRead;
+                [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
             
-            if (bytesRead < 0) {
-                [self fail];
-                [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
-                break;
-            }
-
-            //Save them to the file handle (And ensure the NSData object is flushed immediately)
-            NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
-            @try {
-                [fileHandle writeData:data];
-                
-                //Ensure the data is properly written to disk before proceeding
-                [fileHandle synchronizeFile];
-            } @catch (NSException *exception) {}
-
-            if (weakOperation.isCancelled){
-                break;
-            }
-            self.countOfBytesReceived += bytesRead;
-            [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
-        }
-    } while (bytesRead > 0);
+        } while (bytesRead > 0);
     
+    }
     //Set the modification date to match the one on the SMB device so we can compare the two at a later date
     [[NSFileManager defaultManager] setAttributes:@{NSFileModificationDate:self.file.modificationTime} ofItemAtPath:self.tempFilePath error:nil];
     
