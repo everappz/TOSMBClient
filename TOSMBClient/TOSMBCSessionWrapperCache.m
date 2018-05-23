@@ -76,7 +76,7 @@
         return;
     }
     @synchronized (self) {
-        [session close];
+        [session close:NO];
         [self.privateCache removeObjectForKey:session.sessionKey];
     }
 }

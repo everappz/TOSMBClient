@@ -137,6 +137,6 @@ extern const NSTimeInterval kSessionTimeout;
 
 - (void)performCallBackWithBlock:(void(^)(void))block;
 
-- (void)close;
+- (void)close:(BOOL)forced;
     
 @end

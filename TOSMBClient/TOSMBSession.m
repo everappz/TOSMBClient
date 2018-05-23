@@ -134,12 +134,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
-    [self close];
+    [self close:YES];
     self.dsm_session = nil;
 }
     
-- (void)close{
-    [self.dsm_session close];
+- (void)close:(BOOL)forced{
+    [self.dsm_session close:forced];
 }
 
 #pragma mark - Authorization -
@@ -163,7 +163,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 }
 
 - (void)reloadSession{
-    [self.dsm_session close];
+    [self.dsm_session close:NO];
     self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
 }
 
@@ -328,12 +328,17 @@ const NSTimeInterval kSessionTimeout = 30.0;
                 return [@([obj1 length]) compare:@([obj2 length])];
             }];
 
-            [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
-                connectToIPError = [self attemptConnectionToAddress:obj port:self.port transport:SMB_TRANSPORT_TCP];
-                if(self.connected){
-                    *stop = YES;
-                }
-            }];
+            if(resultArr.count>0){
+                [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                    connectToIPError = [self attemptConnectionToAddress:obj port:self.port transport:SMB_TRANSPORT_TCP];
+                    if(self.connected){
+                        *stop = YES;
+                    }
+                }];
+            }
+            else{
+                connectToIPError = [self attemptConnectionToAddress:nil port:self.port transport:SMB_TRANSPORT_TCP];
+            }
             
             if(self.connected==NO){
                 [resultArr enumerateObjectsUsingBlock:^(NSString *obj, NSUInteger idx, BOOL * _Nonnull stop) {
