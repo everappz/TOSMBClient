@@ -89,13 +89,12 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 // -------------------------------------------------------------------------------
 
 #pragma mark - Class Implementation -
+
 @implementation TONetBIOSNameService
 
 - (instancetype)init{
     if (self = [super init]) {
-        _nameService=NULL;
-        [self nameService];
-        if(_nameService==NULL){
+        if(self.nameService==nil){
             NSParameterAssert(NO);
             return nil;
         }
@@ -104,16 +103,20 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 }
 
 - (netbios_ns *)nameService{
-    if(_nameService==NULL){
-         _nameService = netbios_ns_new();
+    @synchronized(self){
+        if(_nameService==NULL){
+             _nameService = netbios_ns_new();
+        }
+        return _nameService;
     }
-    return _nameService;
 }
 
 - (void)destroyNameService{
-    if(_nameService!=NULL){
-        netbios_ns_destroy(_nameService);
-        _nameService = NULL;
+    @synchronized(self){
+        if(_nameService!=NULL){
+            netbios_ns_destroy(_nameService);
+            _nameService = NULL;
+        }
     }
 }
 
@@ -159,9 +162,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
         
         return;
     }
-    
     NSBlockOperation *blockOperation = [[NSBlockOperation alloc] init];
-    
     __weak typeof (self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
@@ -179,7 +180,6 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
             if (failure) {
                 [[NSOperationQueue mainQueue] addOperationWithBlock:^{ failure(); }];
             }
-            
             return;
         }
         
@@ -194,46 +194,44 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     [self.operationQueue addOperation:blockOperation];
 }
 
-- (NSString *)lookupNetworkNameForIPAddress:(NSString *)address
-{
+- (NSString *)lookupNetworkNameForIPAddress:(NSString *)address{
     @synchronized (self) {
-        if (address == nil)
+        if (address == nil){
             return nil;
-        
+        }
         struct in_addr  addr;
         inet_aton([address cStringUsingEncoding:NSASCIIStringEncoding], &addr);
         char *addressString = (char *)netbios_ns_inverse(self.nameService, addr.s_addr);
         if (addressString == NULL) {
             return nil;
         }
-        
         return [NSString stringWithCString:addressString encoding:NSUTF8StringEncoding];
     }
 }
 
-- (void)lookupNetworkNameForIPAddress:(NSString *)address success:(void (^)(NSString *))success failure:(void (^)(void))failure
-{
+- (void)lookupNetworkNameForIPAddress:(NSString *)address success:(void (^)(NSString *))success failure:(void (^)(void))failure{
     if (address == nil) {
-        if (failure)
+        if (failure){
             failure();
-        
+        }
         return;
     }
     
     NSBlockOperation *blockOperation = [[NSBlockOperation alloc] init];
-    
     __weak typeof (self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
         //Make sure the queue wasn't cancelled before it even started
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled){
             return;
+        }
         
         NSString *name = [weakSelf lookupNetworkNameForIPAddress:address];
         
         //Ensure the queue wasn't cancelled while the lookup was occurring
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled){
             return;
+        }
         
         //Followup if the lookup failed and a failure block was supplied
         if (name == nil) {
@@ -254,6 +252,7 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
 }
 
 #pragma mark - Operation Queue Management -
+
 - (void)setupOperationQueue{
     if (self.operationQueue){
         return;
@@ -270,29 +269,34 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
         [self stopDiscovery];
     }
     
-    if (timeout <= FLT_EPSILON) {
-        timeout = kTONetBIOSNameServiceDiscoveryTimeOut;
+    @synchronized(self){
+        if (timeout <= FLT_EPSILON) {
+            timeout = kTONetBIOSNameServiceDiscoveryTimeOut;
+        }
+        
+        netbios_ns_discover_callbacks callbacks;
+        callbacks.p_opaque = (__bridge void *)(self);
+        callbacks.pf_on_entry_added = on_entry_added;
+        callbacks.pf_on_entry_removed = on_entry_removed;
+        
+        self.discovering = YES;
+        self.discoveryAddedEvent = addedHandler;
+        self.discoveryRemovedEvent = removedHandler;
+        
+        BOOL result = netbios_ns_discover_start(self.nameService, (unsigned int)timeout, &callbacks);
+        return result;
     }
-    
-    netbios_ns_discover_callbacks callbacks;
-    callbacks.p_opaque = (__bridge void *)(self);
-    callbacks.pf_on_entry_added = on_entry_added;
-    callbacks.pf_on_entry_removed = on_entry_removed;
-    
-    self.discovering = YES;
-    self.discoveryAddedEvent = addedHandler;
-    self.discoveryRemovedEvent = removedHandler;
-    
-    return netbios_ns_discover_start(self.nameService, (unsigned int)timeout, &callbacks);
 }
 
 - (BOOL)stopDiscovery{
-    self.discovering = NO;
-    self.discoveryAddedEvent = nil;
-    self.discoveryRemovedEvent = nil;
-    BOOL result = netbios_ns_discover_stop(self.nameService);
-    [self destroyNameService];
-    return result;
+    @synchronized(self){
+        self.discovering = NO;
+        self.discoveryAddedEvent = nil;
+        self.discoveryRemovedEvent = nil;
+        BOOL result = netbios_ns_discover_stop(self.nameService);
+        [self destroyNameService];
+        return result;
+    }
 }
 
 @end
