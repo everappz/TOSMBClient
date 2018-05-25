@@ -134,7 +134,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
-    [self close:YES];
+    [self close:NO];
     self.dsm_session = nil;
 }
     

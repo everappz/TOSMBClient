@@ -14,6 +14,15 @@
 
 static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrapperSpecificKey;
 
+@interface TOSMBCSessionWrapperLocker: NSObject
+
++ (instancetype)sharedLocker;
+
+
+
+@end
+
+
 @interface TOSMBCSessionWrapper()
 
 @property (nonatomic,assign) smb_session *smb_session;
@@ -42,27 +51,32 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
 }
 
 - (void)dealloc{
-    [self close:YES];
+    [self close:NO];
     if (self.queue) {
         self.queue = NULL;
     }
 }
 
 - (void)close:(BOOL)forced{
+    
     if(self.smb_session!=NULL){
         WEAK_SELF();
         
         void(^closeBlock)(void) = ^{
-            [weakSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                smb_tid shareID = [obj unsignedShortValue];
-                smb_tree_disconnect(weakSelf.smb_session, shareID);
-            }];
-            if([weakSelf isConnected]){
-                smb_session_logoff(weakSelf.smb_session);
-            }
-            if(weakSelf.smb_session!=NULL){
-                smb_session_destroy(weakSelf.smb_session);
-                weakSelf.smb_session = NULL;
+            @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+                @synchronized(weakSelf.shares){
+                    [weakSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+                        smb_tid shareID = [obj unsignedShortValue];
+                        smb_tree_disconnect(weakSelf.smb_session, shareID);
+                    }];
+                }
+                if([weakSelf isConnected]){
+                    smb_session_logoff(weakSelf.smb_session);
+                }
+                if(weakSelf.smb_session!=NULL){
+                    smb_session_destroy(weakSelf.smb_session);
+                    weakSelf.smb_session = NULL;
+                }
             }
         };
         
@@ -81,9 +95,11 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
     NSAssert(currentWrapper != self,@"inSMBSession: was called reentrantly on the same queue, which would lead to a deadlock");
     WEAK_SELF();
     void (^syncBlock)(void) = ^{
-        smb_session *smb_session = weakSelf.smb_session;
-        if(smb_session!=NULL){
-            block(smb_session);
+        @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+            smb_session *smb_session = weakSelf.smb_session;
+            if(smb_session!=NULL){
+                block(smb_session);
+            }
         }
     };
     if(currentWrapper != self){
@@ -130,7 +146,9 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
                 if(cachedShareID>0 && self.smb_session!=NULL){
                     WEAK_SELF();
                     [self inSyncQueue:^{
-                         smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
+                        @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+                            smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
+                        }
                     }];
                 }
                 [self.shares setObject:@(shareID) forKey:shareName];
@@ -147,7 +165,9 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
             if(cachedShareID>0 && self.smb_session!=NULL){
                 WEAK_SELF();
                 [self inSyncQueue:^{
-                     smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
+                    @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+                        smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
+                    }
                 }];
             }
             [self.shares removeObjectForKey:shareName];
@@ -174,6 +194,21 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
                             password:(NSString *)password{
     NSString *sessionKey = [NSString stringWithFormat:@"%@:%@:%@:%@",ipAddress,domain,userName,password];
     return sessionKey;
+}
+
+@end
+
+
+@implementation TOSMBCSessionWrapperLocker
+
+
++ (instancetype)sharedLocker{
+    static dispatch_once_t onceToken;
+    static TOSMBCSessionWrapperLocker *shared;
+    dispatch_once(&onceToken, ^{
+        shared = [[TOSMBCSessionWrapperLocker alloc] init];
+    });
+    return shared;
 }
 
 @end

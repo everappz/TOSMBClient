@@ -6,6 +6,8 @@
 //  Copyright © 2016 Everappz. All rights reserved.
 //
 
+#ifdef USE_SMB_SESSION_CACHE
+
 #import <Foundation/Foundation.h>
 
 @class TOSMBCSessionWrapper;
@@ -21,3 +23,5 @@
 - (void)removeSessionFromCache:(TOSMBCSessionWrapper *)session;
 
 @end
+
+#endif

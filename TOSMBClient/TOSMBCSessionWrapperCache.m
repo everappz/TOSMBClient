@@ -6,6 +6,8 @@
 //  Copyright © 2016 Everappz. All rights reserved.
 //
 
+#ifdef USE_SMB_SESSION_CACHE
+
 #import "TOSMBCSessionWrapperCache.h"
 #import "TOSMBCSessionWrapper.h"
 #import "TOSMBConstants.h"
@@ -21,16 +23,12 @@
 @implementation TOSMBCSessionWrapperCache
 
 + (instancetype)sharedCache{
-    /*
     static dispatch_once_t onceToken;
     static TOSMBCSessionWrapperCache *cache = nil;
     dispatch_once(&onceToken, ^{
         cache = [[TOSMBCSessionWrapperCache alloc] init];
     });
     return cache;
-    */
-    NSParameterAssert(NO);
-    return nil;
 }
 
 - (instancetype)init{
@@ -82,3 +80,5 @@
 }
 
 @end
+
+#endif
