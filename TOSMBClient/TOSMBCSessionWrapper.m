@@ -51,17 +51,15 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
 }
 
 - (void)dealloc{
-    [self close:NO];
+    NSParameterAssert(self.smb_session==NULL);
     if (self.queue) {
         self.queue = NULL;
     }
 }
 
 - (void)close:(BOOL)forced{
-    
     if(self.smb_session!=NULL){
         WEAK_SELF();
-        
         void(^closeBlock)(void) = ^{
             @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
                 @synchronized(weakSelf.shares){
@@ -79,15 +77,14 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
                 }
             }
         };
-        
         if(forced==NO){
             [self inSyncQueue:closeBlock];
         }
         else{
             closeBlock();
         }
-            
     }
+    
 }
 
 - (void)inSMBSession:(void (^)(smb_session *session))block {
