@@ -176,7 +176,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //If only one piece of information was supplied, use NetBIOS to resolve the other
-    if(self.ipAddress.length == 0 || self.hostName.length == 0){
+    if((self.ipAddress.length == 0 || self.hostName.length == 0) && self.doNotUseInternalNameResolution==NO){
         TONetBIOSNameService *nameService = [TONetBIOSNameService sharedService];
         if (self.ipAddress.length==0){
             self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
