@@ -200,7 +200,8 @@
     self.downloadOperation = nil;
     WEAK_SELF();
     id deleteBlock = ^{
-        [[NSFileManager defaultManager] removeItemAtPath:weakSelf.tempFilePath error:nil];
+        if (weakSelf==nil) { return; }
+        @try{[[NSFileManager defaultManager] removeItemAtPath:weakSelf.tempFilePath error:nil];}@catch(NSException *exc){}
     };
     NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
     [deleteOperation addExecutionBlock:deleteBlock];
@@ -314,6 +315,7 @@
     __weak NSBlockOperation *weakOperation = operation;
     
     id executionBlock = ^{
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         [weakSelf performDownloadWithOperation:weakOperation];
     };
     [operation addExecutionBlock:executionBlock];

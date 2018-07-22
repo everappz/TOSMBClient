@@ -514,12 +514,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
     
     id operationBlock = ^{
         
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         NSError *error = nil;
         NSArray *files = [weakSelf contentsOfDirectoryAtPath:path error:&error];
         
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         if (error) {
             [weakSelf reloadSession];
@@ -568,11 +568,11 @@ const NSTimeInterval kSessionTimeout = 30.0;
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         NSError *error = [weakSelf attemptConnection];
         
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         if (error) {
             [weakSelf reloadSession];
@@ -669,12 +669,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         NSError *error = nil;
         TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:path error:&error];
         
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         
         if (error) {
             [weakSelf reloadSession];
@@ -763,10 +763,10 @@ const NSTimeInterval kSessionTimeout = 30.0;
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
     id operationBlock = ^{
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf moveItemAtPath:fromPath toPath:toPath error:&error];
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         if (success==NO || error) {
             [weakSelf reloadSession];
             if (errorHandler) {
@@ -852,10 +852,10 @@ const NSTimeInterval kSessionTimeout = 30.0;
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf createDirectoryAtPath:path error:&error];
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         if (success==NO || error) {
             [weakSelf reloadSession];
             if (errorHandler) {
@@ -1151,10 +1151,10 @@ const NSTimeInterval kSessionTimeout = 30.0;
     __weak NSBlockOperation *weakOperation = operation;
     
     id operationBlock = ^{
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         NSError *error = nil;
         BOOL success = [weakSelf deleteItemAtPath:path error:&error];
-        if (weakOperation.isCancelled) { return; }
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         if (success==NO) {
             [weakSelf reloadSession];
             if (errorHandler) {

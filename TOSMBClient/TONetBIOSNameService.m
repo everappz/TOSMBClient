@@ -167,13 +167,13 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
         //Make sure the queue wasn't cancelled before it even started
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil)
             return;
         
         NSString *ipAddress = [weakSelf resolveIPAddressWithName:name type:type];
         
         //Ensure the queue wasn't cancelled while the lookup was occurring
-        if (weakOperation.isCancelled)
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil)
             return;
         
         if (ipAddress == nil) {
@@ -222,14 +222,14 @@ static void on_entry_removed(void *p_opaque, netbios_ns_entry *entry)
     __weak NSBlockOperation *weakOperation = blockOperation;
     id executionBlock = ^{
         //Make sure the queue wasn't cancelled before it even started
-        if (weakOperation.isCancelled){
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil){
             return;
         }
         
         NSString *name = [weakSelf lookupNetworkNameForIPAddress:address];
         
         //Ensure the queue wasn't cancelled while the lookup was occurring
-        if (weakOperation.isCancelled){
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil){
             return;
         }
         

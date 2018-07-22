@@ -164,6 +164,7 @@
     __weak NSBlockOperation *weakOperation = operation;
     
     id executionBlock = ^{
+        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
         [weakSelf performUploadWithOperation:weakOperation];
     };
     [operation addExecutionBlock:executionBlock];
