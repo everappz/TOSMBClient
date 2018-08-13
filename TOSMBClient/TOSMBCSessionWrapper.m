@@ -69,7 +69,7 @@
 }
 
 - (void)inSMBSession:(void (^)(smb_session *session))block {
-    @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+    @synchronized(/*[TOSMBCSessionWrapperLocker sharedLocker]*/self){
         smb_session *smb_session = self.smb_session;
         if(smb_session!=NULL && block){
             block(smb_session);
