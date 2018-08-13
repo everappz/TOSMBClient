@@ -12,13 +12,9 @@
 #import "smb_stat.h"
 #import "smb_dir.h"
 
-static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrapperSpecificKey;
-
 @interface TOSMBCSessionWrapperLocker: NSObject
 
 + (instancetype)sharedLocker;
-
-
 
 @end
 
@@ -26,7 +22,6 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
 @interface TOSMBCSessionWrapper()
 
 @property (nonatomic,assign) smb_session *smb_session;
-@property (nonatomic,strong) dispatch_queue_t queue;
 @property (nonatomic,strong) NSMutableDictionary *shares;
 
 @end
@@ -44,80 +39,40 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
             return nil;
         }
         self.shares = [[NSMutableDictionary alloc] init];
-        self.queue = dispatch_queue_create([[NSString stringWithFormat:@"smb.session.wrapper.%@", self] UTF8String], NULL);
-        dispatch_queue_set_specific(self.queue, kTOSMBCSessionWrapperSpecificKey, (__bridge void *)self, NULL);
     }
     return self;
 }
 
 - (void)dealloc{
     NSParameterAssert(self.smb_session==NULL);
-    if (self.queue) {
-        self.queue = NULL;
-    }
 }
 
 - (void)close:(BOOL)forced{
     if(self.smb_session!=NULL){
         WEAK_SELF();
-        void(^closeBlock)(void) = ^{
-            @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
-                @synchronized(weakSelf.shares){
-                    [weakSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                        smb_tid shareID = [obj unsignedShortValue];
-                        smb_tree_disconnect(weakSelf.smb_session, shareID);
-                    }];
-                }
-                if([weakSelf isConnected]){
-                    smb_session_logoff(weakSelf.smb_session);
-                }
-                if(weakSelf.smb_session!=NULL){
-                    smb_session_destroy(weakSelf.smb_session);
-                    weakSelf.smb_session = NULL;
-                }
+        [self inSMBSession:^(smb_session *session) {
+            @synchronized(weakSelf.shares){
+                [weakSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+                    smb_tid shareID = [obj unsignedShortValue];
+                    smb_tree_disconnect(weakSelf.smb_session, shareID);
+                }];
             }
-        };
-        if(forced==NO){
-            [self inSyncQueue:closeBlock];
-        }
-        else{
-            closeBlock();
-        }
+            if([weakSelf isConnected]){
+                smb_session_logoff(weakSelf.smb_session);
+            }
+            if(weakSelf.smb_session!=NULL){
+                smb_session_destroy(weakSelf.smb_session);
+                weakSelf.smb_session = NULL;
+            }
+        }];
     }
-    
 }
 
 - (void)inSMBSession:(void (^)(smb_session *session))block {
-    TOSMBCSessionWrapper *currentWrapper = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperSpecificKey);
-    NSAssert(currentWrapper != self,@"inSMBSession: was called reentrantly on the same queue, which would lead to a deadlock");
-    WEAK_SELF();
-    void (^syncBlock)(void) = ^{
-        @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
-            smb_session *smb_session = weakSelf.smb_session;
-            if(smb_session!=NULL){
-                block(smb_session);
-            }
-        }
-    };
-    if(currentWrapper != self){
-        dispatch_sync(self.queue, syncBlock);
-    }
-    else{
-        syncBlock();
-    }
-}
-
-- (void)inSyncQueue:(void(^)(void))block{
-    if(block){
-        TOSMBCSessionWrapper *currentWrapper = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperSpecificKey);
-        NSParameterAssert([NSThread isMainThread]==NO);
-        if(currentWrapper != self){
-            dispatch_sync(self.queue, ^() {
-                block();
-            });
-        }
-        else{
-            block();
+    @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
+        smb_session *smb_session = self.smb_session;
+        if(smb_session!=NULL && block){
+            block(smb_session);
         }
     }
 }
@@ -141,11 +96,8 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
                 if(cachedShareID>0 && self.smb_session!=NULL){
-                    WEAK_SELF();
-                    [self inSyncQueue:^{
-                        @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
-                            smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
-                        }
+                    [self inSMBSession:^(smb_session *session) {
+                        smb_tree_disconnect(session, cachedShareID);
                     }];
                 }
                 [self.shares setObject:@(shareID) forKey:shareName];
@@ -160,11 +112,8 @@ static const void * const kTOSMBCSessionWrapperSpecificKey = &kTOSMBCSessionWrap
         @synchronized (self.shares) {
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(cachedShareID>0 && self.smb_session!=NULL){
-                WEAK_SELF();
-                [self inSyncQueue:^{
-                    @synchronized([TOSMBCSessionWrapperLocker sharedLocker]){
-                        smb_tree_disconnect(weakSelf.smb_session, cachedShareID);
-                    }
+                [self inSMBSession:^(smb_session *session) {
+                    smb_tree_disconnect(session, cachedShareID);
                 }];
             }
             [self.shares removeObjectForKey:shareName];
