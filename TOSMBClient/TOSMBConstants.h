@@ -25,6 +25,7 @@
 #import "smb_defs.h"
 
 #define WEAK_SELF()  __weak typeof(self) weakSelf = self;
+#define STRONG_WEAK_SELF()  __strong typeof(weakSelf) strongSelf = weakSelf;
 
 /** SMB Error Values */
 typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)

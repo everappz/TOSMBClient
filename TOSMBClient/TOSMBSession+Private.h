@@ -26,6 +26,8 @@
 
 @property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests */
 
+@property (nonatomic, strong) NSOperationQueue *callbackQueue; /* Operation queue for asynchronous callbacks */
+
 /* Connection/Authentication handling */
 - (NSError *)attemptConnection;
 
@@ -33,10 +35,5 @@
 - (NSString *)shareNameFromPath:(NSString *)path;
 - (NSString *)filePathExcludingSharePathFromPath:(NSString *)path;
 - (NSString *)relativeSMBPathFromPath:(NSString *)path;
-
-/* Asynchronous operation management */
-- (void)setupDataQueue;
-
-@property (nonatomic, strong)dispatch_queue_t callBackQueue;
 
 @end

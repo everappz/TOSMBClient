@@ -12,12 +12,6 @@
 #import "smb_stat.h"
 #import "smb_dir.h"
 
-@interface TOSMBCSessionWrapperLocker: NSObject
-
-+ (instancetype)sharedLocker;
-
-@end
-
 
 @interface TOSMBCSessionWrapper()
 
@@ -51,25 +45,26 @@
     if(self.smb_session!=NULL){
         WEAK_SELF();
         [self inSMBSession:^(smb_session *session) {
-            @synchronized(weakSelf.shares){
-                [weakSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+            STRONG_WEAK_SELF();
+            @synchronized(strongSelf.shares){
+                [strongSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
                     smb_tid shareID = [obj unsignedShortValue];
-                    smb_tree_disconnect(weakSelf.smb_session, shareID);
+                    smb_tree_disconnect(strongSelf.smb_session, shareID);
                 }];
             }
-            if([weakSelf isConnected]){
-                smb_session_logoff(weakSelf.smb_session);
-            }
-            if(weakSelf.smb_session!=NULL){
-                smb_session_destroy(weakSelf.smb_session);
-                weakSelf.smb_session = NULL;
+            if(strongSelf.smb_session!=NULL){
+                if([strongSelf isConnected]){
+                    smb_session_logoff(strongSelf.smb_session);
+                }
+                smb_session_destroy(strongSelf.smb_session);
+                strongSelf.smb_session = NULL;
             }
         }];
     }
 }
 
 - (void)inSMBSession:(void (^)(smb_session *session))block {
-    @synchronized(/*[TOSMBCSessionWrapperLocker sharedLocker]*/self){
+    @synchronized(self){
         smb_session *smb_session = self.smb_session;
         if(smb_session!=NULL && block){
             block(smb_session);
@@ -140,21 +135,6 @@
                             password:(NSString *)password{
     NSString *sessionKey = [NSString stringWithFormat:@"%@:%@:%@:%@",ipAddress,domain,userName,password];
     return sessionKey;
-}
-
-@end
-
-
-@implementation TOSMBCSessionWrapperLocker
-
-
-+ (instancetype)sharedLocker{
-    static dispatch_once_t onceToken;
-    static TOSMBCSessionWrapperLocker *shared;
-    dispatch_once(&onceToken, ^{
-        shared = [[TOSMBCSessionWrapperLocker alloc] init];
-    });
-    return shared;
 }
 
 @end

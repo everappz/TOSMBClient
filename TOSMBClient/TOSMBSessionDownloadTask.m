@@ -49,8 +49,6 @@
 @property (assign,readwrite) int64_t countOfBytesReceived;
 @property (assign,readwrite) int64_t countOfBytesExpectedToReceive;
 
-@property (nonatomic, assign) UIBackgroundTaskIdentifier backgroundTaskIdentifier;
-
 /** Feedback handlers */
 @property (nonatomic, copy) void (^progressHandler)(uint64_t totalBytesWritten, uint64_t totalBytesExpected);
 @property (nonatomic, copy) void (^successHandler)(NSString *filePath);
@@ -341,13 +339,7 @@
     //Set up a cleanup block that'll release any handles before cancellation
     WEAK_SELF();
     void (^cleanup)(void) = ^{
-        
-        //Release the background task handler, making the app eligible to be suspended now
-        if (weakSelf.backgroundTaskIdentifier){
-            [[UIApplication sharedApplication] endBackgroundTask:weakSelf.backgroundTaskIdentifier];
-            weakSelf.backgroundTaskIdentifier = 0;
-        }
-        
+
         if (fileID){
             [weakSelf.dsm_session inSMBSession:^(smb_session *session) {
                 smb_fclose(session, fileID);
@@ -468,9 +460,6 @@
         seekOffset = self.seekOffset;
     }
     self.countOfBytesReceived = seekOffset;
-    
-    //Create a background handle so the download will continue even if the app is suspended
-    self.backgroundTaskIdentifier = [[UIApplication sharedApplication] beginBackgroundTaskWithExpirationHandler:^{ [self suspend]; }];
     
     if (seekOffset > 0) {
         [self.dsm_session inSMBSession:^(smb_session *session) {

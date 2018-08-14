@@ -84,7 +84,13 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (instancetype)init{
     if (self = [super init]) {
-        self.callBackQueue = dispatch_queue_create([@"com.smb.session.callback.queue" cStringUsingEncoding:NSUTF8StringEncoding], NULL);
+
+        self.callbackQueue = [[NSOperationQueue alloc] init];
+        self.callbackQueue.maxConcurrentOperationCount = 1;
+        
+        self.dataQueue = [[NSOperationQueue alloc] init];
+        self.dataQueue.maxConcurrentOperationCount = 1;
+        
         self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
         if (self.dsm_session == nil){
             return nil;
@@ -134,6 +140,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (void)dealloc{
     [self.dataQueue cancelAllOperations];
+    [self.callbackQueue cancelAllOperations];
     [self close:NO];
     self.dsm_session = nil;
 }
@@ -505,8 +512,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *))successHandler error:(void (^)(NSError *))errorHandler{
     
-    [self setupDataQueue];
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     
     __weak typeof(self) weakSelf = self;
@@ -541,7 +546,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 #pragma mark - Download Tasks -
 
 - (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
-    [self setupDataQueue];
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath delegate:delegate];
     return task;
 }
@@ -551,7 +555,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
                                             failHandler:(void (^)(NSError *error))failHandler{
-    [self setupDataQueue];
     TOSMBSessionDownloadTask *task = [[TOSMBSessionDownloadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath progressHandler:progressHandler successHandler:completionHandler failHandler:failHandler];
     return task;
 }
@@ -560,8 +563,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSOperation *)openConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
 
-    [self setupDataQueue];
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     
     __weak typeof(self) weakSelf = self;
@@ -661,8 +662,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSOperation *)itemAttributesAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler{
     
-    [self setupDataQueue];
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     
     __weak typeof(self) weakSelf = self;
@@ -757,8 +756,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSOperation *)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath success:(void (^)(TOSMBSessionFile *newFile))successHandler error:(void (^)(NSError *))errorHandler{
     
-    [self setupDataQueue];
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
@@ -844,8 +841,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 }
 
 - (NSOperation *)createDirectoryAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler error:(void (^)(NSError *))errorHandler{
-    
-    [self setupDataQueue];
     
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     __weak typeof(self) weakSelf = self;
@@ -1144,8 +1139,6 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSOperation *)deleteItemAtPath:(NSString *)path success:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler{
     
-    [self setupDataQueue];
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     __weak typeof(self) weakSelf = self;
     __weak NSBlockOperation *weakOperation = operation;
@@ -1180,31 +1173,16 @@ const NSTimeInterval kSessionTimeout = 30.0;
                                     progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                   completionHandler:(void (^)(NSString *filePath))completionHandler
                                         failHandler:(void (^)(NSError *error))errorHandler{
-    [self setupDataQueue];
     TOSMBSessionUploadTask *task = [[TOSMBSessionUploadTask alloc] initWithSession:self filePath:path destinationPath:destinationPath progressHandler:progressHandler successHandler:completionHandler failHandler:errorHandler];
     return task;
 }
 
 #pragma mark - Concurrency Management -
 
-- (void)setupDataQueue{
-    if (self.dataQueue){
-        return;
-    }
-    self.dataQueue = [[NSOperationQueue alloc] init];
-    //self.dataQueue.maxConcurrentOperationCount = 1;
-}
-
 - (void)performCallBackWithBlock:(void(^)(void))block{
-    __weak typeof (self) weakSelf = self;
-    NSParameterAssert(self.callBackQueue);
-    dispatch_async(self.callBackQueue, ^{
-        @synchronized(weakSelf){
-            if(block){
-                block();
-            }
-        }
-    });
+    NSParameterAssert(self.callbackQueue);
+    NSBlockOperation *op = [NSBlockOperation blockOperationWithBlock:block];
+    [self.callbackQueue addOperation:op];
 }
 
 #pragma mark - String Parsing -
