@@ -42,24 +42,20 @@
 }
 
 - (void)close:(BOOL)forced{
-    if(self.smb_session!=NULL){
-        WEAK_SELF();
-        [self inSMBSession:^(smb_session *session) {
-            STRONG_WEAK_SELF();
-            @synchronized(strongSelf.shares){
-                [strongSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                    smb_tid shareID = [obj unsignedShortValue];
-                    smb_tree_disconnect(strongSelf.smb_session, shareID);
-                }];
-            }
-            if(strongSelf.smb_session!=NULL){
-                if([strongSelf isConnected]){
-                    smb_session_logoff(strongSelf.smb_session);
+    @synchronized(self){
+        if(self.smb_session!=NULL){
+            [self.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+                smb_tid shareID = [obj unsignedShortValue];
+                smb_tree_disconnect(self.smb_session, shareID);
+            }];
+            if(self.smb_session!=NULL){
+                if([self isConnected]){
+                    smb_session_logoff(self.smb_session);
                 }
-                smb_session_destroy(strongSelf.smb_session);
-                strongSelf.smb_session = NULL;
+                smb_session_destroy(self.smb_session);
+                self.smb_session = NULL;
             }
-        }];
+        }
     }
 }
 
@@ -75,7 +71,7 @@
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
-        @synchronized(self.shares){
+        @synchronized(self){
             smb_tid share_id = [[self.shares objectForKey:shareName] unsignedShortValue];
             return share_id;
         }
@@ -87,13 +83,11 @@
     NSParameterAssert(shareName.length>0);
     NSParameterAssert(shareID>0);
     if(shareName.length>0 && shareID>0){
-        @synchronized(self.shares){
+        @synchronized(self){
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
                 if(cachedShareID>0 && self.smb_session!=NULL){
-                    [self inSMBSession:^(smb_session *session) {
-                        smb_tree_disconnect(session, cachedShareID);
-                    }];
+                    smb_tree_disconnect(self.smb_session, cachedShareID);
                 }
                 [self.shares setObject:@(shareID) forKey:shareName];
             }
@@ -104,12 +98,10 @@
 - (void)removeCachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
-        @synchronized (self.shares) {
+        @synchronized (self) {
             smb_tid cachedShareID = [self cachedShareIDForName:shareName];
             if(cachedShareID>0 && self.smb_session!=NULL){
-                [self inSMBSession:^(smb_session *session) {
-                    smb_tree_disconnect(session, cachedShareID);
-                }];
+                smb_tree_disconnect(self.smb_session, cachedShareID);
             }
             [self.shares removeObjectForKey:shareName];
         }

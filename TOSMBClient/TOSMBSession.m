@@ -152,7 +152,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 #pragma mark - Authorization -
 
 - (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password domain:(NSString *)domain{
-    @synchronized(self) {
+    {
         self.userName = userName;
         self.password = password;
         self.domain = domain;
@@ -283,7 +283,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSError *)attemptConnection{
     
-    @synchronized(self) {
+    {
         
         __block BOOL sessionValid = YES;
         [self.dsm_session inSMBSession:^(smb_session *session) {
@@ -396,7 +396,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         //Attempt a connection attempt (If it has not already been done)
         NSError *resultError = [self attemptConnection];
@@ -596,7 +596,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (TOSMBSessionFile *)itemAttributesAtPath:(NSString *)path error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         TOSMBSessionFile *file = nil;
         
@@ -696,7 +696,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         NSError *resultError = [self attemptConnection];
         if (error && resultError){
@@ -787,7 +787,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)createDirectoryAtPath:(NSString *)path error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         NSError *resultError = [self attemptConnection];
         if (error && resultError){
@@ -875,7 +875,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)recursiveContentOfDirectoryAtPath:(NSString *)dirPath inShare:(smb_tid)shareID items:(NSMutableArray **)items error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         if (dirPath.length == 0 || [dirPath isEqualToString:@"/"]) {
             if (error) {
@@ -951,7 +951,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)deleteDirectoryAtPath:(NSString *)dirPath inShare:(smb_tid)shareID error:(NSError **)error{
    
-    @synchronized(self) {
+    {
         
         if (dirPath.length == 0 || [dirPath isEqualToString:@"/"]) {
             if (error) {
@@ -986,7 +986,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)deleteFileAtPath:(NSString *)filePath inShare:(smb_tid)shareID error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         if (filePath.length == 0 || [filePath isEqualToString:@"/"]) {
             if (error) {
@@ -1021,7 +1021,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 - (BOOL)deleteItemAtPath:(NSString *)path error:(NSError **)error{
     
-    @synchronized(self) {
+    {
 
         NSError *resultError = [self attemptConnection];
         int result = -1;
