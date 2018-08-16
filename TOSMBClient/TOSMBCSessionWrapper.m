@@ -39,27 +39,26 @@
 
 - (void)dealloc{
     NSParameterAssert(self.smb_session==NULL);
+    [self close];
 }
 
-- (void)close:(BOOL)forced{
+- (void)close{
     @synchronized(self){
         if(self.smb_session!=NULL){
             [self.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
                 smb_tid shareID = [obj unsignedShortValue];
                 smb_tree_disconnect(self.smb_session, shareID);
             }];
-            if(self.smb_session!=NULL){
-                if([self isConnected]){
-                    smb_session_logoff(self.smb_session);
-                }
-                smb_session_destroy(self.smb_session);
-                self.smb_session = NULL;
+            if(smb_session_is_guest(self.smb_session) >= 0){
+                smb_session_logoff(self.smb_session);
             }
+            smb_session_destroy(self.smb_session);
+            self.smb_session = NULL;
         }
     }
 }
 
-- (void)inSMBSession:(void (^)(smb_session *session))block {
+- (void)inSMBCSession:(void (^)(smb_session *session))block {
     @synchronized(self){
         smb_session *smb_session = self.smb_session;
         if(smb_session!=NULL && block){
@@ -109,7 +108,11 @@
 }
 
 - (BOOL)isConnected{
-    return (self.smb_session !=NULL && smb_session_is_guest(self.smb_session) >= 0);
+    BOOL connected = NO;
+    @synchronized(self){
+        connected = (self.smb_session !=NULL && smb_session_is_guest(self.smb_session) >= 0);
+    }
+    return connected;
 }
 
 - (BOOL)isValid{

@@ -27,6 +27,13 @@
 #define WEAK_SELF()  __weak typeof(self) weakSelf = self;
 #define STRONG_WEAK_SELF()  __strong typeof(weakSelf) strongSelf = weakSelf;
 
+#define WEAK_OPERATION()  __weak typeof(operation) weakOperation = operation;
+#define STRONG_WEAK_OPERATION()  __strong typeof(weakOperation) strongOperation = weakOperation;
+
+#define CHECK_IF_WEAK_OPERATION_IS_CANCELLED_OR_NIL_AND_RETURN()  if (weakOperation.isCancelled || weakOperation==nil) { return; }
+#define CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN()  if (weakSelf==nil) { return; }
+
+
 /** SMB Error Values */
 typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
 {
@@ -46,6 +53,7 @@ typedef NS_ENUM(NSInteger, TOSMBSessionErrorCode)
     TOSMBSessionErrorCodeUnableToDeleteItem,
     TOSMBSessionErrorCodeDirectoryUploaded,
     TOSMBSessionErrorCodeFailToUpload,
+    TOSMBSessionErrorCodeCancelled, 
 };
 
 /** NetBIOS Service Device Types */

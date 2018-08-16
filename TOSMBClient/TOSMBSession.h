@@ -134,10 +134,6 @@ extern const NSTimeInterval kSessionTimeout;
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
                                             failHandler:(void (^)(NSError *error))error;
 
-//private
-
-- (void)performCallBackWithBlock:(void(^)(void))block;
-
-- (void)close:(BOOL)forced;
+- (void)close;
     
 @end

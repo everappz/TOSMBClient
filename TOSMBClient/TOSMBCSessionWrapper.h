@@ -37,8 +37,8 @@
                             userName:(NSString *)userName
                             password:(NSString *)password;
 
-- (void)inSMBSession:(void (^)(smb_session *session))block;
+- (void)inSMBCSession:(void (^)(smb_session *session))block;
 
-- (void)close:(BOOL)forced;
+- (void)close;
 
 @end

@@ -24,6 +24,8 @@
 /* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, assign, readwrite) NSInteger guest;
 
+@property (nonatomic, assign) BOOL needsReloadSession;
+
 @property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests */
 
 @property (nonatomic, strong) NSOperationQueue *callbackQueue; /* Operation queue for asynchronous callbacks */
@@ -35,5 +37,7 @@
 - (NSString *)shareNameFromPath:(NSString *)path;
 - (NSString *)filePathExcludingSharePathFromPath:(NSString *)path;
 - (NSString *)relativeSMBPathFromPath:(NSString *)path;
+
+- (void)performCallBackWithBlock:(void(^)(void))block;
 
 @end

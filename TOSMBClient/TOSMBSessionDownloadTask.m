@@ -56,7 +56,7 @@
 
 /* Download methods */
 - (void)setupDownloadOperation;
-- (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation;
+- (void)performDownloadWithOperation:(NSBlockOperation *)weakOperation;
 - (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID;
 
 /* File Path Methods */
@@ -198,8 +198,9 @@
     self.downloadOperation = nil;
     WEAK_SELF();
     id deleteBlock = ^{
-        if (weakSelf==nil) { return; }
-        @try{[[NSFileManager defaultManager] removeItemAtPath:weakSelf.tempFilePath error:nil];}@catch(NSException *exc){}
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        @try{[[NSFileManager defaultManager] removeItemAtPath:strongSelf.tempFilePath error:nil];}@catch(NSException *exc){}
     };
     NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
     [deleteOperation addExecutionBlock:deleteBlock];
@@ -233,30 +234,29 @@
 }
 
 - (void)didSucceedWithFilePath:(NSString *)filePath{
-    
     WEAK_SELF();
-    
     [self.sessionObject performCallBackWithBlock:^{
-        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)]){
-            [weakSelf.delegate downloadTask:weakSelf didFinishDownloadingToPath:filePath];
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)]){
+            [strongSelf.delegate downloadTask:strongSelf didFinishDownloadingToPath:filePath];
         }
-        if (weakSelf.successHandler){
-            weakSelf.successHandler(filePath);
+        if (strongSelf.successHandler){
+            strongSelf.successHandler(filePath);
         }
     }];
-    
 }
 
 - (void)didFailWithError:(NSError *)error{
-
     WEAK_SELF();
-    
     [self.sessionObject performCallBackWithBlock:^{
-        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)]){
-            [weakSelf.delegate downloadTask:weakSelf didCompleteWithError:error];
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)]){
+            [strongSelf.delegate downloadTask:strongSelf didCompleteWithError:error];
         }
-        if (weakSelf.failHandler){
-            weakSelf.failHandler(error);
+        if (strongSelf.failHandler){
+            strongSelf.failHandler(error);
         }
     }];
 }
@@ -264,11 +264,13 @@
 - (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
     WEAK_SELF();
     [self.sessionObject performCallBackWithBlock:^{
-        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
-            [weakSelf.delegate downloadTask:weakSelf didWriteBytes:bytesWritten totalBytesReceived:weakSelf.countOfBytesReceived totalBytesExpectedToReceive:weakSelf.countOfBytesExpectedToReceive];
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
+            [strongSelf.delegate downloadTask:strongSelf didWriteBytes:bytesWritten totalBytesReceived:strongSelf.countOfBytesReceived totalBytesExpectedToReceive:strongSelf.countOfBytesExpectedToReceive];
         }
-        if (weakSelf.progressHandler){
-            weakSelf.progressHandler(weakSelf.countOfBytesReceived, weakSelf.countOfBytesExpectedToReceive);
+        if (strongSelf.progressHandler){
+            strongSelf.progressHandler(strongSelf.countOfBytesReceived, strongSelf.countOfBytesExpectedToReceive);
         }
     }];
 }
@@ -276,8 +278,10 @@
 - (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
     WEAK_SELF();
     [self.sessionObject performCallBackWithBlock:^{
-        if (weakSelf.delegate && [weakSelf.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)]){
-            [weakSelf.delegate downloadTask:weakSelf didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)]){
+            [strongSelf.delegate downloadTask:strongSelf didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
         }
     }];
 }
@@ -288,7 +292,7 @@
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
     if(self.dsm_session!=NULL){
         __block smb_stat fileStat = NULL;
-        [self.dsm_session inSMBSession:^(smb_session *session) {
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
             fileStat = smb_fstat(session, treeID, fileCString);
         }];
         
@@ -303,32 +307,39 @@
 }
 
 - (void)setupDownloadOperation{
+    
     if (self.downloadOperation){
         return;
     }
     
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    
-    __weak typeof (self) weakSelf = self;
-    __weak NSBlockOperation *weakOperation = operation;
+    WEAK_SELF();
+    WEAK_OPERATION();
     
     id executionBlock = ^{
-        if (weakOperation.isCancelled || weakOperation==nil || weakSelf==nil) { return; }
-        [weakSelf performDownloadWithOperation:weakOperation];
+        
+        CHECK_IF_WEAK_OPERATION_IS_CANCELLED_OR_NIL_AND_RETURN();
+        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
+        STRONG_WEAK_SELF();
+        STRONG_WEAK_OPERATION();
+        
+        [strongSelf performDownloadWithOperation:strongOperation];
     };
     [operation addExecutionBlock:executionBlock];
     operation.completionBlock = ^{
-        weakSelf.downloadOperation = nil;
+        STRONG_WEAK_SELF();
+        strongSelf.downloadOperation = nil;
     };
-
+    
     self.downloadOperation = operation;
 }
 
-- (void)performDownloadWithOperation:(__weak NSBlockOperation *)weakOperation{
+- (void)performDownloadWithOperation:(NSBlockOperation *)operation{
     
     NSParameterAssert(self.dsm_session!=nil && self.sessionObject!=nil);
     
-    if (weakOperation.isCancelled || self.dsm_session==nil || self.sessionObject==nil){
+    if (operation.isCancelled || self.dsm_session==nil || self.sessionObject==nil){
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         return;
     }
     
@@ -339,9 +350,9 @@
     //Set up a cleanup block that'll release any handles before cancellation
     WEAK_SELF();
     void (^cleanup)(void) = ^{
-
+        
         if (fileID){
-            [weakSelf.dsm_session inSMBSession:^(smb_session *session) {
+            [weakSelf.dsm_session inSMBCSession:^(smb_session *session) {
                 smb_fclose(session, fileID);
             }];
         }
@@ -349,7 +360,7 @@
         //if (self.session!=NULL && treeID){
         //    smb_tree_disconnect(self.session, treeID);
         //}
-
+        
     };
     
     //---------------------------------------------------------------------------------------
@@ -365,7 +376,8 @@
         return;
     }
     
-    if (weakOperation.isCancelled) {
+    if (operation.isCancelled) {
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         cleanup();
         return;
     }
@@ -377,10 +389,10 @@
     NSString *shareName = [self.sessionObject shareNameFromPath:self.sourceFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     treeID = [self.dsm_session cachedShareIDForName:shareName];
-
+    
     if(treeID==0){
-        [self.dsm_session inSMBSession:^(smb_session *session) {
-             smb_tree_connect(session, shareCString, &treeID);
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
+            smb_tree_connect(session, shareCString, &treeID);
         }];
     }
     if (treeID==0) {
@@ -393,7 +405,8 @@
         [self.dsm_session cacheShareID:treeID forName:shareName];
     }
     
-    if (weakOperation.isCancelled) {
+    if (operation.isCancelled) {
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         cleanup();
         return;
     }
@@ -411,7 +424,8 @@
         return;
     }
     
-    if (weakOperation.isCancelled) {
+    if (operation.isCancelled) {
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         cleanup();
         return;
     }
@@ -426,7 +440,7 @@
     
     //---------------------------------------------------------------------------------------
     //Open the file handle
-    [self.dsm_session inSMBSession:^(smb_session *session) {
+    [self.dsm_session inSMBCSession:^(smb_session *session) {
         smb_fopen(session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
     }];
     
@@ -436,7 +450,8 @@
         return;
     }
     
-    if (weakOperation.isCancelled) {
+    if (operation.isCancelled) {
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         cleanup();
         return;
     }
@@ -462,7 +477,7 @@
     self.countOfBytesReceived = seekOffset;
     
     if (seekOffset > 0) {
-        [self.dsm_session inSMBSession:^(smb_session *session) {
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
             smb_fseek(session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
         }];
         [self didResumeAtOffset:seekOffset totalBytesExpected:self.countOfBytesExpectedToReceive];
@@ -475,34 +490,34 @@
     
     @autoreleasepool {
         do {
-     
-                [self.dsm_session inSMBSession:^(smb_session *session) {
-                    bytesRead = smb_fread(session, fileID, buffer, bufferSize);
-                }];
             
-                if (bytesRead < 0) {
-                    [self fail];
-                    [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
-                    break;
-                }
-
-                //Save them to the file handle (And ensure the NSData object is flushed immediately)
-                NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
-                @try {
-                    [fileHandle writeData:data];
-                    
-                    //Ensure the data is properly written to disk before proceeding
-                    [fileHandle synchronizeFile];
-                } @catch (NSException *exception) {}
-
-                if (weakOperation.isCancelled){
-                    break;
-                }
-                self.countOfBytesReceived += bytesRead;
-                [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
+            [self.dsm_session inSMBCSession:^(smb_session *session) {
+                bytesRead = smb_fread(session, fileID, buffer, bufferSize);
+            }];
+            
+            if (bytesRead < 0) {
+                [self fail];
+                [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
+                break;
+            }
+            
+            //Save them to the file handle (And ensure the NSData object is flushed immediately)
+            NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
+            @try {
+                [fileHandle writeData:data];
+                
+                //Ensure the data is properly written to disk before proceeding
+                [fileHandle synchronizeFile];
+            } @catch (NSException *exception) {}
+            
+            if (operation.isCancelled){
+                break;
+            }
+            self.countOfBytesReceived += bytesRead;
+            [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
             
         } while (bytesRead > 0);
-    
+        
     }
     //Set the modification date to match the one on the SMB device so we can compare the two at a later date
     [[NSFileManager defaultManager] setAttributes:@{NSFileModificationDate:self.file.modificationTime} ofItemAtPath:self.tempFilePath error:nil];
@@ -510,7 +525,8 @@
     free(buffer);
     [fileHandle closeFile];
     
-    if (weakOperation.isCancelled  || self.state != TOSMBSessionTransferTaskStateRunning) {
+    if (operation.isCancelled  || self.state != TOSMBSessionTransferTaskStateRunning) {
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         cleanup();
         return;
     }
