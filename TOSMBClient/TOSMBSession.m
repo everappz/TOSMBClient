@@ -93,6 +93,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
             return nil;
         }
         
+        self.useInternalNameResolution = YES;
         self.guest = -1;
     }
     return self;
@@ -181,7 +182,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //If only one piece of information was supplied, use NetBIOS to resolve the other
-    if((self.ipAddress.length == 0 || self.hostName.length == 0) && self.doNotUseInternalNameResolution==NO){
+    if((self.ipAddress.length == 0 || self.hostName.length == 0) && self.useInternalNameResolution){
         TONetBIOSNameService *nameService = [TONetBIOSNameService sharedService];
         if (self.ipAddress.length==0){
             self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
@@ -196,8 +197,8 @@ const NSTimeInterval kSessionTimeout = 30.0;
         return errorForErrorCode(TOSMBSessionErrorCodeUnableToResolveAddress);
     }
     
-    if(self.hostName==nil){
-        self.hostName = @"";
+    if(self.hostName.length==0){
+        self.hostName = self.ipAddress;
     }
     
     //Convert the IP Address and hostname values to their C equivalents

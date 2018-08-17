@@ -41,7 +41,7 @@ extern const NSTimeInterval kSessionTimeout;
 @property (nonatomic, copy) NSString *domain;
 
 @property (nonatomic, readonly,getter=isConnected) BOOL connected;
-@property (nonatomic, assign) BOOL doNotUseInternalNameResolution;
+@property (nonatomic, assign) BOOL useInternalNameResolution;
 
 /* 1 == Guest, 0 == Logged in, -1 == Logged out */
 @property (nonatomic, readonly) NSInteger guest;
