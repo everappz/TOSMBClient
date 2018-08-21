@@ -70,7 +70,7 @@
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
-        @synchronized(self){
+        @synchronized(self.shares){
             smb_tid share_id = [[self.shares objectForKey:shareName] unsignedShortValue];
             return share_id;
         }
@@ -81,15 +81,20 @@
 - (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     NSParameterAssert(shareID>0);
+    BOOL removeShare = NO;
+    smb_tid cachedShareID = 0;
     if(shareName.length>0 && shareID>0){
-        @synchronized(self){
-            smb_tid cachedShareID = [self cachedShareIDForName:shareName];
+        @synchronized(self.shares){
+            cachedShareID = [self cachedShareIDForName:shareName];
             if(shareID!=cachedShareID){
-                if(cachedShareID>0 && self.smb_session!=NULL){
-                    smb_tree_disconnect(self.smb_session, cachedShareID);
-                }
+                removeShare = YES;
                 [self.shares setObject:@(shareID) forKey:shareName];
             }
+        }
+        if(removeShare){
+            [self inSMBCSession:^(smb_session *session) {
+                smb_tree_disconnect(session, cachedShareID);
+            }];
         }
     }
 }
@@ -97,12 +102,17 @@
 - (void)removeCachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     if(shareName.length>0){
-        @synchronized (self) {
-            smb_tid cachedShareID = [self cachedShareIDForName:shareName];
-            if(cachedShareID>0 && self.smb_session!=NULL){
-                smb_tree_disconnect(self.smb_session, cachedShareID);
-            }
+        smb_tid cachedShareID = 0;
+        BOOL removeShare = NO;
+        @synchronized (self.shares) {
+            cachedShareID = [self cachedShareIDForName:shareName];
+            removeShare = (cachedShareID>0);
             [self.shares removeObjectForKey:shareName];
+        }
+        if(removeShare){
+            [self inSMBCSession:^(smb_session *session) {
+                smb_tree_disconnect(session, cachedShareID);
+            }];
         }
     }
 }

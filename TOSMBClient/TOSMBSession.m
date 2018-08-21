@@ -276,17 +276,15 @@ const NSTimeInterval kSessionTimeout = 30.0;
     self.lastRequestDate = [NSDate date];
     
     //Don't attempt another connection if we already made it through
-    __block BOOL sessionConnected = NO;
     WEAK_SELF();
     [self.dsm_session inSMBCSession:^(smb_session *session) {
         STRONG_WEAK_SELF();
         if (session && smb_session_is_guest(session) >= 0){
             strongSelf.guest = smb_session_is_guest(session);
             strongSelf.connected = YES;
-            sessionConnected = YES;
         }
     }];
-    if(sessionConnected){
+    if(self.connected){
         return nil;
     }
     

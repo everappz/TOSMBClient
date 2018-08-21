@@ -68,7 +68,7 @@
 /* Feedback events sent to either the delegate or callback blocks */
 - (void)didSucceedWithFilePath:(NSString *)filePath;
 - (void)didFailWithError:(NSError *)error;
-- (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
+- (void)didUpdateWriteBytes:(NSData *)bytesWritten;
 - (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
 
 @end
@@ -261,7 +261,7 @@
     }];
 }
 
-- (void)didUpdateWriteBytes:(NSData *)bytesWritten totalBytesWritten:(uint64_t)totalBytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
+- (void)didUpdateWriteBytes:(NSData *)bytesWritten{
     WEAK_SELF();
     [self.sessionObject performCallBackWithBlock:^{
         CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
@@ -485,7 +485,9 @@
     
     //Perform the file download
     __block int64_t bytesRead = 0;
-    NSInteger bufferSize = 32768;
+    const NSInteger bufferSize = 32768;
+    const NSInteger callbackDataBufferSize = 5*bufferSize;
+    NSMutableData *callbackData = [[NSMutableData alloc] init];
     char *buffer = malloc(bufferSize);
     
     @autoreleasepool {
@@ -514,7 +516,11 @@
                 break;
             }
             self.countOfBytesReceived += bytesRead;
-            [self didUpdateWriteBytes:data totalBytesWritten:self.countOfBytesReceived totalBytesExpected:self.countOfBytesExpectedToReceive];
+            [callbackData appendData:data];
+            if(callbackData.length>=callbackDataBufferSize || bytesRead==0){
+                [self didUpdateWriteBytes:callbackData];
+                callbackData = [[NSMutableData alloc] init];
+            }
             
         } while (bytesRead > 0);
         
