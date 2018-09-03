@@ -504,7 +504,7 @@
             }
             
             //Save them to the file handle (And ensure the NSData object is flushed immediately)
-            NSData *data = [NSData dataWithBytes:buffer length:bufferSize];
+            NSData *data = [NSData dataWithBytes:buffer length:bytesRead];
             @try {
                 [fileHandle writeData:data];
                 
