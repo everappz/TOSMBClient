@@ -36,6 +36,7 @@
 @property (nonatomic, readonly) NSDate *accessTime;         /** The date when this file was last accessed. */
 @property (nonatomic, readonly) NSDate *writeTime;          /** The date when this file was last written to. */
 @property (nonatomic, readonly) NSDate *modificationTime;   /** The date when this file was last modified. */
+@property (nonatomic, readonly) BOOL readOnly;
 
 /**
  * Init a new instance representing a file or folder inside a network share
@@ -55,5 +56,7 @@
 - (instancetype)initWithShareName:(NSString *)name;
 
 - (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath;
+
++ (instancetype)rootDirectory;
 
 @end

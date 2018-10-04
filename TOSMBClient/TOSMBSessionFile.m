@@ -39,6 +39,7 @@
 @property (nonatomic, strong) NSDate *accessTime;
 @property (nonatomic, assign) uint64_t writeTimestamp;
 @property (nonatomic, strong) NSDate *writeTime;
+@property (nonatomic, assign) BOOL readOnly;
 
 - (NSDate *)dateFromLDAPTimeStamp:(uint64_t)timestamp;
 
@@ -107,18 +108,28 @@
     return self;
 }
 
++ (instancetype)rootDirectory{
+    TOSMBSessionFile *file = [TOSMBSessionFile new];
+    if (self) {
+        file->_name = @"root";
+        file->_fileSize = 0;
+        file->_allocationSize = 0;
+        file->_directory = YES;
+        file->_readOnly = YES;
+        file->_fullPath = @"/";
+        [file normalizeFullPath];
+    }
+    return file;
+}
+
 - (void)normalizeFullPath{
-    
     NSString *normalizedPath = _fullPath;
-    
     if (normalizedPath.length == 0) {
         normalizedPath = @"/";
     }
-    
     if ([normalizedPath characterAtIndex:normalizedPath.length - 1] != '/' && _directory) {
         normalizedPath = [normalizedPath stringByAppendingString:@"/"];
     }
-    
     _fullPath = [normalizedPath copy];
 }
 
