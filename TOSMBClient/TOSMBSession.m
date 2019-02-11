@@ -1180,7 +1180,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     return path;
 }
 
-- (NSString *)filePathExcludingSharePathFromPath:(NSString *)path{
+- (NSString *)filePathExcludingShareNameFromPath:(NSString *)path{
     
     path = [path copy];
     
@@ -1212,7 +1212,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 - (NSString *)relativeSMBPathFromPath:(NSString *)path{
     
     //work out the remainder of the file path and create the search query
-    NSString *relativePath = [self filePathExcludingSharePathFromPath:path];
+    NSString *relativePath = [self filePathExcludingShareNameFromPath:path];
     //prepend double backslashes
     relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
     //replace any additional forward slashes with backslashes

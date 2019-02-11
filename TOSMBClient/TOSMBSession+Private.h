@@ -35,7 +35,7 @@
 
 /* File path parsing */
 - (NSString *)shareNameFromPath:(NSString *)path;
-- (NSString *)filePathExcludingSharePathFromPath:(NSString *)path;
+- (NSString *)filePathExcludingShareNameFromPath:(NSString *)path;
 - (NSString *)relativeSMBPathFromPath:(NSString *)path;
 
 - (void)performCallBackWithBlock:(void(^)(void))block;

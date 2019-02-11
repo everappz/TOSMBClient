@@ -135,5 +135,7 @@ extern const NSTimeInterval kSessionTimeout;
                                             failHandler:(void (^)(NSError *error))error;
 
 - (void)close;
-    
+
+- (NSOperationQueue *)dataQueue;
+
 @end
