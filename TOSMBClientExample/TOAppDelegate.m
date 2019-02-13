@@ -7,7 +7,7 @@
 //
 
 #import "TOAppDelegate.h"
-#import "TOSMBClient.h"
+#import <TOSMBClient/TOSMBClient.h>
 
 @interface TOAppDelegate ()
 

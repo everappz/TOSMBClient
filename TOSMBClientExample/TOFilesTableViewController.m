@@ -7,7 +7,7 @@
 //
 
 #import "TOFilesTableViewController.h"
-#import "TOSMBClient.h"
+#import <TOSMBClient/TOSMBClient.h>
 #import "TORootViewController.h"
 
 @interface TOFilesTableViewController ()

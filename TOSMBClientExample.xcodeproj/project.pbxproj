@@ -14,19 +14,11 @@
 		2214DCCD1B661CD2003E3EF1 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2214DCCC1B661CD2003E3EF1 /* Images.xcassets */; };
 		2214DCD01B661CD2003E3EF1 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 2214DCCE1B661CD2003E3EF1 /* LaunchScreen.xib */; };
 		2214DCDC1B661CD2003E3EF1 /* TOSMBClientExampleTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2214DCDB1B661CD2003E3EF1 /* TOSMBClientExampleTests.m */; };
-		2214DCF61B666766003E3EF1 /* TONetBIOSNameService.m in Sources */ = {isa = PBXBuildFile; fileRef = 2214DCF51B666766003E3EF1 /* TONetBIOSNameService.m */; };
-		2214DCF91B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m in Sources */ = {isa = PBXBuildFile; fileRef = 2214DCF81B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m */; };
-		2214DCFC1B66847B003E3EF1 /* TOSMBConstants.m in Sources */ = {isa = PBXBuildFile; fileRef = 2214DCFB1B66847B003E3EF1 /* TOSMBConstants.m */; };
-		22236CF91B67C2C700176C34 /* TOSMBSession.m in Sources */ = {isa = PBXBuildFile; fileRef = 22236CF81B67C2C700176C34 /* TOSMBSession.m */; };
-		22236CFC1B687DB100176C34 /* libiconv.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 22236CFB1B687DB100176C34 /* libiconv.dylib */; };
-		22301F701B6DED2500326F84 /* TOSMBSessionFile.m in Sources */ = {isa = PBXBuildFile; fileRef = 22301F6F1B6DED2500326F84 /* TOSMBSessionFile.m */; };
 		22416F681B7125A3007B8A8B /* TOFilesTableViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 22416F671B7125A3007B8A8B /* TOFilesTableViewController.m */; };
-		22AE8B881B6F66E4008412CF /* TOSMBSessionDownloadTask.m in Sources */ = {isa = PBXBuildFile; fileRef = 22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */; };
 		22CB5AEB1B78929B006F05F2 /* TORootViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 22CB5AEA1B78929B006F05F2 /* TORootViewController.m */; };
-		EF8B370C1C7528CC005BAB2A /* libdsm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = EF8B37091C7528C0005BAB2A /* libdsm.a */; };
-		EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */; };
-		EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */ = {isa = PBXBuildFile; fileRef = EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */; };
-		EFC809141F168F7900695E11 /* TOSMBCSessionWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */; };
+		AC8346652213FBE90073F4F9 /* TOSMBClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC83465E2213FBD50073F4F9 /* TOSMBClient.framework */; };
+		AC8346662213FBF40073F4F9 /* TOSMBClient.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC83465E2213FBD50073F4F9 /* TOSMBClient.framework */; };
+		AC8346672213FBF40073F4F9 /* TOSMBClient.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AC83465E2213FBD50073F4F9 /* TOSMBClient.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -37,21 +29,42 @@
 			remoteGlobalIDString = 2214DCBB1B661CD2003E3EF1;
 			remoteInfo = TOSMBClientExample;
 		};
-		EF8B37081C7528C0005BAB2A /* PBXContainerItemProxy */ = {
+		AC83465D2213FBD50073F4F9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = EF8B37041C7528C0005BAB2A /* dsm.xcodeproj */;
+			containerPortal = AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */;
 			proxyType = 2;
-			remoteGlobalIDString = EF6319DB1C7474D10032F5CC;
-			remoteInfo = dsm;
+			remoteGlobalIDString = AC834429221367D70073F4F9;
+			remoteInfo = TOSMBClient;
 		};
-		EF8B370A1C7528C8005BAB2A /* PBXContainerItemProxy */ = {
+		AC8346612213FBE40073F4F9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
-			containerPortal = EF8B37041C7528C0005BAB2A /* dsm.xcodeproj */;
+			containerPortal = AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */;
 			proxyType = 1;
-			remoteGlobalIDString = EF6319DA1C7474D10032F5CC;
-			remoteInfo = dsm;
+			remoteGlobalIDString = AC834428221367D70073F4F9;
+			remoteInfo = TOSMBClient;
+		};
+		AC8346682213FBF40073F4F9 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = AC834428221367D70073F4F9;
+			remoteInfo = TOSMBClient;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		AC83466A2213FBF40073F4F9 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				AC8346672213FBF40073F4F9 /* TOSMBClient.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		2214DCBC1B661CD2003E3EF1 /* TOSMBClientExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOSMBClientExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -67,32 +80,11 @@
 		2214DCD51B661CD2003E3EF1 /* TOSMBClientExampleTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TOSMBClientExampleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		2214DCDA1B661CD2003E3EF1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2214DCDB1B661CD2003E3EF1 /* TOSMBClientExampleTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TOSMBClientExampleTests.m; sourceTree = "<group>"; };
-		2214DCF41B666766003E3EF1 /* TONetBIOSNameService.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TONetBIOSNameService.h; sourceTree = "<group>"; };
-		2214DCF51B666766003E3EF1 /* TONetBIOSNameService.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TONetBIOSNameService.m; sourceTree = "<group>"; };
-		2214DCF71B6678C7003E3EF1 /* TONetBIOSNameServiceEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TONetBIOSNameServiceEntry.h; sourceTree = "<group>"; };
-		2214DCF81B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TONetBIOSNameServiceEntry.m; sourceTree = "<group>"; };
-		2214DCFA1B66847B003E3EF1 /* TOSMBConstants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBConstants.h; sourceTree = "<group>"; };
-		2214DCFB1B66847B003E3EF1 /* TOSMBConstants.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBConstants.m; sourceTree = "<group>"; };
-		22236CF71B67C2C700176C34 /* TOSMBSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSession.h; sourceTree = "<group>"; };
-		22236CF81B67C2C700176C34 /* TOSMBSession.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSession.m; sourceTree = "<group>"; };
-		22236CFB1B687DB100176C34 /* libiconv.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libiconv.dylib; path = usr/lib/libiconv.dylib; sourceTree = SDKROOT; };
-		22301F6E1B6DED2500326F84 /* TOSMBSessionFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionFile.h; sourceTree = "<group>"; };
-		22301F6F1B6DED2500326F84 /* TOSMBSessionFile.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionFile.m; sourceTree = "<group>"; };
 		22416F661B7125A3007B8A8B /* TOFilesTableViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOFilesTableViewController.h; sourceTree = "<group>"; };
 		22416F671B7125A3007B8A8B /* TOFilesTableViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOFilesTableViewController.m; sourceTree = "<group>"; };
-		22416F691B712BE7007B8A8B /* TOSMBClient.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TOSMBClient.h; sourceTree = "<group>"; };
-		22AE8B861B6F66E4008412CF /* TOSMBSessionDownloadTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionDownloadTask.h; sourceTree = "<group>"; };
-		22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionDownloadTask.m; sourceTree = "<group>"; };
 		22CB5AE91B78929B006F05F2 /* TORootViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TORootViewController.h; sourceTree = "<group>"; };
 		22CB5AEA1B78929B006F05F2 /* TORootViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TORootViewController.m; sourceTree = "<group>"; };
-		EF8B37041C7528C0005BAB2A /* dsm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = dsm.xcodeproj; path = xcode/dsm.xcodeproj; sourceTree = "<group>"; };
-		EFBDA84A1C70BBFF001BDEF6 /* TOHost.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOHost.h; sourceTree = "<group>"; };
-		EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOHost.m; sourceTree = "<group>"; };
-		EFBDA84C1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionUploadTask.h; sourceTree = "<group>"; };
-		EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionUploadTask.m; sourceTree = "<group>"; };
-		EFC809101F168F7900695E11 /* TOSMBCSessionWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBCSessionWrapper.h; sourceTree = "<group>"; };
-		EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TOSMBCSessionWrapper.m; sourceTree = "<group>"; };
-		EFF6AA2F1CF2188E00ABFC2F /* TOSMBSession+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TOSMBSession+Private.h"; sourceTree = "<group>"; };
+		AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = TOSMBClient.xcodeproj; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,8 +92,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				EF8B370C1C7528CC005BAB2A /* libdsm.a in Frameworks */,
-				22236CFC1B687DB100176C34 /* libiconv.dylib in Frameworks */,
+				AC8346652213FBE90073F4F9 /* TOSMBClient.framework in Frameworks */,
+				AC8346662213FBF40073F4F9 /* TOSMBClient.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -118,10 +110,11 @@
 		2214DCB31B661CD2003E3EF1 = {
 			isa = PBXGroup;
 			children = (
-				2214DCE51B662632003E3EF1 /* TOSMBClient */,
+				AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */,
 				2214DCBE1B661CD2003E3EF1 /* TOSMBClientExample */,
 				2214DCD81B661CD2003E3EF1 /* TOSMBClientExampleTests */,
 				2214DCBD1B661CD2003E3EF1 /* Products */,
+				AC8346642213FBE90073F4F9 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -179,49 +172,19 @@
 			name = "Supporting Files";
 			sourceTree = "<group>";
 		};
-		2214DCE51B662632003E3EF1 /* TOSMBClient */ = {
+		AC83465A2213FBD50073F4F9 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				2214DCE61B662632003E3EF1 /* libdsm */,
-				22416F691B712BE7007B8A8B /* TOSMBClient.h */,
-				2214DCFA1B66847B003E3EF1 /* TOSMBConstants.h */,
-				2214DCFB1B66847B003E3EF1 /* TOSMBConstants.m */,
-				2214DCF41B666766003E3EF1 /* TONetBIOSNameService.h */,
-				2214DCF51B666766003E3EF1 /* TONetBIOSNameService.m */,
-				2214DCF71B6678C7003E3EF1 /* TONetBIOSNameServiceEntry.h */,
-				2214DCF81B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m */,
-				22236CF71B67C2C700176C34 /* TOSMBSession.h */,
-				22236CF81B67C2C700176C34 /* TOSMBSession.m */,
-				EFF6AA2F1CF2188E00ABFC2F /* TOSMBSession+Private.h */,
-				22301F6E1B6DED2500326F84 /* TOSMBSessionFile.h */,
-				22301F6F1B6DED2500326F84 /* TOSMBSessionFile.m */,
-				22AE8B861B6F66E4008412CF /* TOSMBSessionDownloadTask.h */,
-				22AE8B871B6F66E4008412CF /* TOSMBSessionDownloadTask.m */,
-				EFBDA84C1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.h */,
-				EFBDA84D1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m */,
-				EFBDA84A1C70BBFF001BDEF6 /* TOHost.h */,
-				EFBDA84B1C70BBFF001BDEF6 /* TOHost.m */,
-				EFC809101F168F7900695E11 /* TOSMBCSessionWrapper.h */,
-				EFC809111F168F7900695E11 /* TOSMBCSessionWrapper.m */,
-			);
-			path = TOSMBClient;
-			sourceTree = "<group>";
-		};
-		2214DCE61B662632003E3EF1 /* libdsm */ = {
-			isa = PBXGroup;
-			children = (
-				EF8B37041C7528C0005BAB2A /* dsm.xcodeproj */,
-				22236CFB1B687DB100176C34 /* libiconv.dylib */,
-			);
-			path = libdsm;
-			sourceTree = "<group>";
-		};
-		EF8B37051C7528C0005BAB2A /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				EF8B37091C7528C0005BAB2A /* libdsm.a */,
+				AC83465E2213FBD50073F4F9 /* TOSMBClient.framework */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		AC8346642213FBE90073F4F9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -234,11 +197,13 @@
 				2214DCB81B661CD2003E3EF1 /* Sources */,
 				2214DCB91B661CD2003E3EF1 /* Frameworks */,
 				2214DCBA1B661CD2003E3EF1 /* Resources */,
+				AC83466A2213FBF40073F4F9 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				EF8B370B1C7528C8005BAB2A /* PBXTargetDependency */,
+				AC8346622213FBE40073F4F9 /* PBXTargetDependency */,
+				AC8346692213FBF40073F4F9 /* PBXTargetDependency */,
 			);
 			name = TOSMBClientExample;
 			productName = TOSMBClientExample;
@@ -295,8 +260,8 @@
 			projectDirPath = "";
 			projectReferences = (
 				{
-					ProductGroup = EF8B37051C7528C0005BAB2A /* Products */;
-					ProjectRef = EF8B37041C7528C0005BAB2A /* dsm.xcodeproj */;
+					ProductGroup = AC83465A2213FBD50073F4F9 /* Products */;
+					ProjectRef = AC8346592213FBD50073F4F9 /* TOSMBClient.xcodeproj */;
 				},
 			);
 			projectRoot = "";
@@ -308,11 +273,11 @@
 /* End PBXProject section */
 
 /* Begin PBXReferenceProxy section */
-		EF8B37091C7528C0005BAB2A /* libdsm.a */ = {
+		AC83465E2213FBD50073F4F9 /* TOSMBClient.framework */ = {
 			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libdsm.a;
-			remoteRef = EF8B37081C7528C0005BAB2A /* PBXContainerItemProxy */;
+			fileType = wrapper.framework;
+			path = TOSMBClient.framework;
+			remoteRef = AC83465D2213FBD50073F4F9 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -344,18 +309,9 @@
 			files = (
 				22416F681B7125A3007B8A8B /* TOFilesTableViewController.m in Sources */,
 				2214DCC81B661CD2003E3EF1 /* TORootTableViewController.m in Sources */,
-				2214DCF61B666766003E3EF1 /* TONetBIOSNameService.m in Sources */,
 				2214DCC51B661CD2003E3EF1 /* TOAppDelegate.m in Sources */,
-				EFC809141F168F7900695E11 /* TOSMBCSessionWrapper.m in Sources */,
-				EFBDA84E1C70BBFF001BDEF6 /* TOHost.m in Sources */,
-				22301F701B6DED2500326F84 /* TOSMBSessionFile.m in Sources */,
-				22AE8B881B6F66E4008412CF /* TOSMBSessionDownloadTask.m in Sources */,
-				22236CF91B67C2C700176C34 /* TOSMBSession.m in Sources */,
 				2214DCC21B661CD2003E3EF1 /* main.m in Sources */,
-				2214DCF91B6678C8003E3EF1 /* TONetBIOSNameServiceEntry.m in Sources */,
-				EFBDA84F1C70BBFF001BDEF6 /* TOSMBSessionUploadTask.m in Sources */,
 				22CB5AEB1B78929B006F05F2 /* TORootViewController.m in Sources */,
-				2214DCFC1B66847B003E3EF1 /* TOSMBConstants.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,10 +331,15 @@
 			target = 2214DCBB1B661CD2003E3EF1 /* TOSMBClientExample */;
 			targetProxy = 2214DCD61B661CD2003E3EF1 /* PBXContainerItemProxy */;
 		};
-		EF8B370B1C7528C8005BAB2A /* PBXTargetDependency */ = {
+		AC8346622213FBE40073F4F9 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = dsm;
-			targetProxy = EF8B370A1C7528C8005BAB2A /* PBXContainerItemProxy */;
+			name = TOSMBClient;
+			targetProxy = AC8346612213FBE40073F4F9 /* PBXContainerItemProxy */;
+		};
+		AC8346692213FBF40073F4F9 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TOSMBClient;
+			targetProxy = AC8346682213FBF40073F4F9 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -495,7 +456,7 @@
 				DEVELOPMENT_TEAM = 2Z797QJNH7;
 				HEADER_SEARCH_PATHS = "\"${SRCROOT}/TOSMBClient/libdsm\"/**";
 				INFOPLIST_FILE = TOSMBClientExample/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -514,7 +475,7 @@
 				DEVELOPMENT_TEAM = 2Z797QJNH7;
 				HEADER_SEARCH_PATHS = "\"${SRCROOT}/TOSMBClient/libdsm\"/**";
 				INFOPLIST_FILE = TOSMBClientExample/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 7.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",

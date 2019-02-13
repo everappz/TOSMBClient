@@ -8,8 +8,7 @@
 
 #import "TORootViewController.h"
 #import "TORootTableViewController.h"
-
-#import "TOSMBClient.h"
+#import <TOSMBClient/TOSMBClient.h>
 
 @interface TORootViewController () <TOSMBSessionDownloadTaskDelegate, UIDocumentInteractionControllerDelegate>
 

@@ -10,7 +10,7 @@
 
 #import "TORootTableViewController.h"
 #import "TOFilesTableViewController.h"
-#import "TOSMBClient.h"
+#import <TOSMBClient/TOSMBClient.h>
 
 @interface TORootTableViewController () <NSNetServiceBrowserDelegate, NSNetServiceDelegate>
 
