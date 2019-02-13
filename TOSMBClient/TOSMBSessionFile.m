@@ -20,30 +20,7 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // -------------------------------------------------------------------------------
 
-#import "TOSMBSessionFile.h"
-#import "smb_stat.h"
-
-@interface TOSMBSessionFile ()
-
-@property (nonatomic, copy) NSString *fullPath;
-@property (nonatomic, assign) BOOL isShareRoot; /** If this item represents the root network share */
-@property (nonatomic, copy) NSString *name;
-@property (nonatomic, assign) uint64_t fileSize;
-@property (nonatomic, assign) uint64_t allocationSize;
-@property (nonatomic, assign) BOOL directory;
-@property (nonatomic, assign) uint64_t modificationTimestamp;
-@property (nonatomic, strong) NSDate *modificationTime;
-@property (nonatomic, assign) uint64_t creationTimestamp;
-@property (nonatomic, strong) NSDate *creationTime;
-@property (nonatomic, assign) uint64_t accessTimestamp;
-@property (nonatomic, strong) NSDate *accessTime;
-@property (nonatomic, assign) uint64_t writeTimestamp;
-@property (nonatomic, strong) NSDate *writeTime;
-@property (nonatomic, assign) BOOL readOnly;
-
-- (NSDate *)dateFromLDAPTimeStamp:(uint64_t)timestamp;
-
-@end
+#import "TOSMBSessionFile+Private.h"
 
 @implementation TOSMBSessionFile
 

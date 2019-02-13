@@ -21,8 +21,6 @@
 // -------------------------------------------------------------------------------
 
 #import <Foundation/Foundation.h>
-#import "netbios_defs.h"
-#import "smb_defs.h"
 
 #define WEAK_SELF()  __weak typeof(self) weakSelf = self;
 #define STRONG_WEAK_SELF()  __strong typeof(weakSelf) strongSelf = weakSelf;

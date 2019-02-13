@@ -68,7 +68,7 @@
     
     TOSMBSessionFile *file = self.files[indexPath.row];
     if (file.directory == NO) {
-        [self.rootController downloadFileFromSession:self.session atFilePath:file.filePath];
+        [self.rootController downloadFileFromSession:self.session atFilePath:file.fullPath];
         return;
     }
     
@@ -77,7 +77,7 @@
     controller.navigationItem.rightBarButtonItem = self.navigationItem.rightBarButtonItem;
     [self.navigationController pushViewController:controller animated:YES];
     
-    [self.session contentsOfDirectoryAtPath:file.filePath success:^(NSArray *files) {
+    [self.session contentsOfDirectoryAtPath:file.fullPath success:^(NSArray *files) {
         controller.files = files;
     } error:^(NSError *error) {
         UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"SMB Client Error" message:error.localizedDescription delegate:nil cancelButtonTitle:nil otherButtonTitles:@"OK", nil];

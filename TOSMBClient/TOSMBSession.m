@@ -25,7 +25,7 @@
 
 #import "TOSMBSession+Private.h"
 #import "TOSMBSession.h"
-#import "TOSMBSessionFile.h"
+#import "TOSMBSessionFile+Private.h"
 #import "TONetBIOSNameService.h"
 #import "TOSMBSessionDownloadTask.h"
 #import "TOHost.h"
@@ -1160,52 +1160,50 @@ const NSTimeInterval kSessionTimeout = 30.0;
 }
 
 #pragma mark - String Parsing -
+
 - (NSString *)shareNameFromPath:(NSString *)path{
-    
-    path = [path copy];
-    
+    NSString *shareName = [path copy];
     //Remove any potential slashes at the start
-    if ([[path substringToIndex:2] isEqualToString:@"//"]) {
-        path = [path substringFromIndex:2];
+    if ([[shareName substringToIndex:2] isEqualToString:@"//"]) {
+        shareName = [shareName substringFromIndex:2];
     }
-    else if ([[path substringToIndex:1] isEqualToString:@"/"]) {
-        path = [path substringFromIndex:1];
+    else if ([[shareName substringToIndex:1] isEqualToString:@"/"]) {
+        shareName = [shareName substringFromIndex:1];
     }
-    
-    NSRange range = [path rangeOfString:@"/"];
-    
-    if (range.location != NSNotFound)
-        path = [path substringWithRange:NSMakeRange(0, range.location)];
-    
-    return path;
+    NSRange range = [shareName rangeOfString:@"/"];
+    if (range.location != NSNotFound){
+        shareName = [shareName substringWithRange:NSMakeRange(0, range.location)];
+    }
+    return shareName;
 }
 
 - (NSString *)filePathExcludingShareNameFromPath:(NSString *)path{
-    
-    path = [path copy];
-    
+    NSString *resultPath = [path copy];
     //Remove any potential slashes at the start
-    if ([[path substringToIndex:2] isEqualToString:@"//"] || [[path substringToIndex:2] isEqualToString:@"\\\\"]) {
-        path = [path substringFromIndex:2];
+    if ([[resultPath substringToIndex:2] isEqualToString:@"//"] || [[resultPath substringToIndex:2] isEqualToString:@"\\\\"]) {
+        resultPath = [resultPath substringFromIndex:2];
     }
-    else if ([[path substringToIndex:1] isEqualToString:@"/"] || [[path substringToIndex:1] isEqualToString:@"\\"]) {
-        path = [path substringFromIndex:1];
+    if ([[resultPath substringToIndex:1] isEqualToString:@"/"] || [[resultPath substringToIndex:1] isEqualToString:@"\\"]) {
+        resultPath = [resultPath substringFromIndex:1];
     }
     
-    NSRange range = [path rangeOfString:@"/"];
+    NSRange range = [resultPath rangeOfString:@"/"];
     if (range.location == NSNotFound) {
-        range = [path rangeOfString:@"\\"];
+        range = [resultPath rangeOfString:@"\\"];
     }
     
     if (range.location != NSNotFound){
-        path = [path substringFromIndex:range.location+1];
+        resultPath = [resultPath substringFromIndex:range.location+1];
     }
     
-    if ([path length] > 1 && [path hasSuffix:@"/"]) {
-        return [path substringToIndex:[path length] - 1];
+    if ([resultPath length] > 1 && [resultPath hasSuffix:@"/"]) {
+        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
+    }
+    if ([resultPath length] > 1 && [resultPath hasSuffix:@"\\"]) {
+        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
     }
     
-    return path;
+    return resultPath;
 }
 
 

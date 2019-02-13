@@ -24,7 +24,7 @@
 
 #import "TOSMBConstants.h"
 #import "TONetBIOSNameService.h"
-#import "TONetBIOSNameServiceEntry.h"
+#import "TONetBIOSNameServiceEntry+Private.h"
 
 #import "netbios_ns.h"
 #import "netbios_defs.h"

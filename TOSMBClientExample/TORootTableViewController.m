@@ -85,7 +85,8 @@
     
     TONetBIOSNameServiceEntry *entry = self.nameServiceEntries[indexPath.row];
 
-    TOSMBSession *session = [[TOSMBSession alloc] initWithHostName:entry.name ipAddress:entry.ipAddressString];
+    TOSMBSession *session = [[TOSMBSession alloc] initWithHostName:entry.name ipAddress:entry.ipAddressString port:@"445"];
+    
     TOFilesTableViewController *controller = [[TOFilesTableViewController alloc] initWithSession:session title:@"Shares"];
     controller.navigationItem.rightBarButtonItem = self.navigationItem.rightBarButtonItem;
     controller.rootController = self.rootController;

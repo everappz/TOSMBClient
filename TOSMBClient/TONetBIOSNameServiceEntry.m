@@ -24,21 +24,10 @@
 #import <arpa/inet.h>
 
 #import "TONetBIOSNameServiceEntry.h"
-#import "TONetBIOSNameService.h"
+#import "TONetBIOSNameServiceEntry+Private.h"
+
 #import "netbios_defs.h"
 
-@interface TONetBIOSNameServiceEntry ()
-
-@property (nonatomic, assign) netbios_ns_entry *entry;
-@property (nonatomic, copy, readwrite) NSString *name;
-@property (nonatomic, copy, readwrite) NSString *group;
-@property (nonatomic, assign, readwrite) TONetBIOSNameServiceType type;
-@property (nonatomic, assign, readwrite) uint32_t ipAddress;
-@property (nonatomic, copy, readwrite) NSString *ipAddressString;
-
-- (BOOL)isEqualToEntry:(TONetBIOSNameServiceEntry *)entry;
-
-@end
 
 @implementation TONetBIOSNameServiceEntry
 

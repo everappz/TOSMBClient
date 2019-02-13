@@ -22,7 +22,6 @@
 
 #import <CommonCrypto/CommonDigest.h>
 #import <UIKit/UIKit.h>
-
 #import "TOSMBSessionDownloadTask.h"
 #import "TOSMBClient.h"
 #import "smb_session.h"
@@ -30,6 +29,7 @@
 #import "smb_file.h"
 #import "smb_defs.h"
 #import "TOSMBSession+Private.h"
+#import "TOSMBSessionFile+Private.h"
 #import "TOSMBSession.h"
 
 
