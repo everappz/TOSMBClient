@@ -53,14 +53,15 @@ extern const NSTimeInterval kSessionTimeout;
  NetBIOS, but whereever possible, you should endeavour to supply both values on instantiation.
  
  @param name The host name of the network device
- @param address The IP address of the network device
+ @param ipAddress The IP address of the network device
  @return A new instance of a session object
  
  */
-- (instancetype)initWithHostName:(NSString *)name port:(NSString *)port;
-- (instancetype)initWithIPAddress:(NSString *)address port:(NSString *)port;
 - (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress port:(NSString *)port;
+
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress port:(NSString *)port;
+- (instancetype)initWithHostName:(NSString *)name port:(NSString *)port;
+- (instancetype)initWithIPAddress:(NSString *)ipAddress port:(NSString *)port;
 
 /**
  Sets both the username and password for this login session. This should be set before any
@@ -75,7 +76,7 @@ extern const NSTimeInterval kSessionTimeout;
  Performs an asynchronous request for a list of files from the network device for the given file path.
  
  @param path The file path to request. Supplying nil or "" will reuest the root list of share folders
- @param error A pointer to an NSError object that will be non-nil if an error occurs.
+ @param errorHandler A pointer to an NSError object that will be non-nil if an error occurs.
  @return An NSArray of TOSMBFile objects describing the contents of the file path
  */
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *files))successHandler error:(void (^)(NSError *))errorHandler;
@@ -112,21 +113,30 @@ extern const NSTimeInterval kSessionTimeout;
                                         destinationPath:(NSString *)destinationPath
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
-                                            failHandler:(void (^)(NSError *error))error;
+                                            failHandler:(void (^)(NSError *error))failHandler;
 
 
 
 //Extra
 
-- (NSOperation *)openConnection:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)openConnection:(void (^)(void))successHandler
+                          error:(void (^)(NSError *))errorHandler;
 
-- (NSOperation *)itemAttributesAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)itemAttributesAtPath:(NSString *)path
+                              success:(void (^)(TOSMBSessionFile *))successHandler
+                                error:(void (^)(NSError *))errorHandler;
 
-- (NSOperation *)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath success:(void (^)(TOSMBSessionFile *newFile))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath
+                        success:(void (^)(TOSMBSessionFile *newFile))successHandler
+                          error:(void (^)(NSError *))errorHandler;
 
-- (NSOperation *)createDirectoryAtPath:(NSString *)path success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)createDirectoryAtPath:(NSString *)path
+                               success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler
+                                 error:(void (^)(NSError *))errorHandler;
 
-- (NSOperation *)deleteItemAtPath:(NSString *)path success:(void (^)(void))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)deleteItemAtPath:(NSString *)path
+                          success:(void (^)(void))successHandler
+                            error:(void (^)(NSError *))errorHandler;
 
 - (TOSMBSessionUploadTask *)uploadTaskForFileAtPath:(NSString *)path
                                         destinationPath:(NSString *)destinationPath

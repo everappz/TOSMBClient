@@ -154,8 +154,13 @@
     if (fileStat==NULL){
         return nil;
     }
+    
     TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:[filePath stringByDeletingLastPathComponent]];
-    smb_stat_destroy(fileStat);
+    
+    [self.dsm_session inSMBCSession:^(smb_session *session) {
+        smb_stat_destroy(fileStat);
+    }];
+
     return file;
 }
 
@@ -225,7 +230,6 @@
             [strongSelf.dsm_session inSMBCSession:^(smb_session *session) {
                  smb_file_rm(session, treeID, relativeUploadPathCString);
             }];
-            //smb_tree_disconnect(self.session, treeID);
         }
     };
     

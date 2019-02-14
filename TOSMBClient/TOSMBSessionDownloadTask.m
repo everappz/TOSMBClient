@@ -295,12 +295,13 @@
         [self.dsm_session inSMBCSession:^(smb_session *session) {
             fileStat = smb_fstat(session, treeID, fileCString);
         }];
-        
         if (fileStat==NULL){
             return nil;
         }
         TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]];
-        smb_stat_destroy(fileStat);
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
+            smb_stat_destroy(fileStat);
+        }];
         return file;
     }
     return nil;
@@ -350,17 +351,12 @@
     //Set up a cleanup block that'll release any handles before cancellation
     WEAK_SELF();
     void (^cleanup)(void) = ^{
-        
+        STRONG_WEAK_SELF();
         if (fileID){
-            [weakSelf.dsm_session inSMBCSession:^(smb_session *session) {
+            [strongSelf.dsm_session inSMBCSession:^(smb_session *session) {
                 smb_fclose(session, fileID);
             }];
         }
-        
-        //if (self.session!=NULL && treeID){
-        //    smb_tree_disconnect(self.session, treeID);
-        //}
-        
     };
     
     //---------------------------------------------------------------------------------------

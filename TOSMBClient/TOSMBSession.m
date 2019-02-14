@@ -22,7 +22,6 @@
 
 #import <arpa/inet.h>
 #import <SystemConfiguration/SystemConfiguration.h>
-
 #import "TOSMBSession+Private.h"
 #import "TOSMBSession.h"
 #import "TOSMBSessionFile+Private.h"
@@ -30,6 +29,7 @@
 #import "TOSMBSessionDownloadTask.h"
 #import "TOHost.h"
 #import "TOSMBSessionUploadTask.h"
+#import "NSString+TOSMB.h"
 
 const NSTimeInterval kSessionTimeout = 30.0;
 
@@ -66,7 +66,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
 
 @end
 
-
+#define CHECK_SESSION_AND_RETURN_NIL_IF_ERROR() if (self.dsm_session == nil){return nil;}
 
 @interface TOSMBSession()
 
@@ -80,52 +80,62 @@ const NSTimeInterval kSessionTimeout = 30.0;
 #pragma mark - Class Creation -
 
 - (instancetype)init{
-    if (self = [super init]) {
-        
-        self.callbackQueue = [[NSOperationQueue alloc] init];
-        self.callbackQueue.maxConcurrentOperationCount = 1;
-        
-        self.dataQueue = [[NSOperationQueue alloc] init];
-        self.dataQueue.maxConcurrentOperationCount = 1;
-        
-        self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
-        if (self.dsm_session == nil){
-            return nil;
-        }
-        
-        self.useInternalNameResolution = YES;
-        self.guest = -1;
+    self = [super init];
+    if (self) {
+        [self customInit];
+        CHECK_SESSION_AND_RETURN_NIL_IF_ERROR();
     }
     return self;
 }
 
+- (void)customInit{
+    self.callbackQueue = [[NSOperationQueue alloc] init];
+    self.callbackQueue.maxConcurrentOperationCount = 1;
+    self.dataQueue = [[NSOperationQueue alloc] init];
+    self.dataQueue.maxConcurrentOperationCount = 1;
+    self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
+    self.useInternalNameResolution = YES;
+    self.guest = -1;
+}
+
 - (instancetype)initWithHostName:(NSString *)name port:(NSString *)port{
-    if (self = [self init]) {
+    self = [super init];
+    if (self) {
+        [self customInit];
         self.hostName = name;
         self.port = port;
+        CHECK_SESSION_AND_RETURN_NIL_IF_ERROR();
     }
     return self;
 }
 
 - (instancetype)initWithIPAddress:(NSString *)address port:(NSString *)port{
-    if (self = [self init]) {
+    self = [super init];
+    if (self) {
+        [self customInit];
         self.ipAddress = address;
         self.port = port;
+        CHECK_SESSION_AND_RETURN_NIL_IF_ERROR();
     }
     return self;
 }
 
 - (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress port:(NSString *)port{
-    if (self = [self init]) {
+    self = [super init];
+    if (self) {
+        [self customInit];
         self.hostName = name;
         self.ipAddress = ipAddress;
         self.port = port;
+        CHECK_SESSION_AND_RETURN_NIL_IF_ERROR();
     }
     return self;
 }
 
 - (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress port:(NSString *)port{
-    if (self = [self init]) {
+    self = [super init];
+    if (self) {
+        [self customInit];
         if([TOHost isValidIPAddress:hostNameOrIPaddress]){
             self.ipAddress = hostNameOrIPaddress;
         }
@@ -133,19 +143,20 @@ const NSTimeInterval kSessionTimeout = 30.0;
             self.hostName = hostNameOrIPaddress;
         }
         self.port = port;
+        CHECK_SESSION_AND_RETURN_NIL_IF_ERROR();
     }
     return self;
 }
 
 - (void)dealloc{
-    [self.dataQueue cancelAllOperations];
-    [self.callbackQueue cancelAllOperations];
     [self close];
-    self.dsm_session = nil;
 }
 
 - (void)close{
+    [self.dataQueue cancelAllOperations];
+    [self.callbackQueue cancelAllOperations];
     [self.dsm_session close];
+    self.dsm_session = nil;
 }
 
 #pragma mark - Authorization -
@@ -182,7 +193,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //If only one piece of information was supplied, use NetBIOS to resolve the other
-    if((self.ipAddress.length == 0 || self.hostName.length == 0) && self.useInternalNameResolution){
+    if( self.useInternalNameResolution && (self.ipAddress.length == 0 || self.hostName.length == 0) ){
         TONetBIOSNameService *nameService = [TONetBIOSNameService sharedService];
         if (self.ipAddress.length==0){
             self.ipAddress = [nameService resolveIPAddressWithName:self.hostName type:TONetBIOSNameServiceTypeFileServer];
@@ -385,43 +396,35 @@ const NSTimeInterval kSessionTimeout = 30.0;
     //If the path is nil, or '/', we'll be specifically requesting the
     //parent network share names as opposed to the actual file lists
     if (path.length == 0 || [path isEqualToString:@"/"]) {
-        __block smb_share_list list=NULL;
-        __block size_t shareCount = 0;
-        __block int smb_result = DSM_ERROR_GENERIC;
-        
-        [self.dsm_session inSMBCSession:^(smb_session *session) {
-            smb_result = smb_share_get_list(session, &list, &shareCount);
-        }];
-        
-        if (smb_result!=DSM_SUCCESS){
-            return nil;
-        }
-        
         NSMutableArray *shareList = [NSMutableArray array];
-        for (NSInteger i = 0; i < shareCount; i++) {
-            const char *shareName = smb_share_list_at(list, i);
-            
-            //Skip system shares suffixed by '$'
-            if (shareName[strlen(shareName)-1] == '$'){
-                continue;
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
+            int smb_result = DSM_ERROR_GENERIC;
+            smb_share_list list=NULL;
+            size_t shareCount = 0;
+            smb_result = smb_share_get_list(session, &list, &shareCount);
+            if (smb_result==DSM_SUCCESS){
+                for (NSInteger i = 0; i < shareCount; i++) {
+                    const char *shareName = smb_share_list_at(list, i);
+                    //Skip system shares suffixed by '$'
+                    if (shareName[strlen(shareName)-1] == '$'){
+                        continue;
+                    }
+                    NSString *shareNameString = [NSString stringWithCString:shareName encoding:NSUTF8StringEncoding];
+                    TOSMBSessionFile *share = [[TOSMBSessionFile alloc] initWithShareName:shareNameString];
+                    [shareList addObject:share];
+                }
+                if(list!=NULL){
+                    smb_share_list_destroy(list);
+                }
             }
-            
-            NSString *shareNameString = [NSString stringWithCString:shareName encoding:NSUTF8StringEncoding];
-            TOSMBSessionFile *share = [[TOSMBSessionFile alloc] initWithShareName:shareNameString];
-            [shareList addObject:share];
-        }
-        
-        if(list!=NULL){
-            smb_share_list_destroy(list);
-        }
-        
+        }];
         return (shareList.count==0)?nil:shareList;
     }
     
     //-----------------------------------------------------------------------------
     
     //Replace any backslashes with forward slashes
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     //Work out just the share name from the path (The first directory in the string)
     NSString *shareName = [self shareNameFromPath:path];
@@ -446,30 +449,28 @@ const NSTimeInterval kSessionTimeout = 30.0;
     NSMutableArray *fileList = [NSMutableArray array];
     
     //Query for a list of files in this directory
-    __block smb_stat_list statList = NULL;
-    
     [self.dsm_session inSMBCSession:^(smb_session *session) {
+        smb_stat_list statList = NULL;
         statList = smb_find(session, shareID, relativePath.UTF8String);
-    }];
-    
-    if(statList!=NULL){
-        size_t listCount = smb_stat_list_count(statList);
-        if (listCount != 0){
-            for (NSInteger i = 0; i < listCount; i++) {
-                smb_stat item = smb_stat_list_at(statList, i);
-                const char* name = smb_stat_name(item);
-                if (name[0] == '.') { //skip hidden files
-                    continue;
-                }
-                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
-                if(file){
-                    [fileList addObject:file];
+        if(statList!=NULL){
+            size_t listCount = smb_stat_list_count(statList);
+            if (listCount != 0){
+                for (NSInteger i = 0; i < listCount; i++) {
+                    smb_stat item = smb_stat_list_at(statList, i);
+                    const char* name = smb_stat_name(item);
+                    if (name[0] == '.') { //skip hidden files
+                        continue;
+                    }
+                    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
+                    if(file){
+                        [fileList addObject:file];
+                    }
                 }
             }
+            smb_stat_list_destroy(statList);
         }
-        smb_stat_list_destroy(statList);
-    }
-    
+    }];
+
     if (fileList.count == 0){
         return nil;
     }
@@ -498,12 +499,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (error) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(files); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler(files);} }];
             }
         }
         
@@ -549,12 +550,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (error) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler();} }];
             }
         }
     };
@@ -589,7 +590,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //Replace any backslashes with forward slashes
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     //Work out just the share name from the path (The first directory in the string)
     NSString *shareName = [self shareNameFromPath:path];
@@ -622,7 +623,9 @@ const NSTimeInterval kSessionTimeout = 30.0;
         else{
             file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
         }
-        smb_stat_destroy(stat);
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
+            smb_stat_destroy(stat);
+        }];
     }
     
     return file;
@@ -647,12 +650,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (error) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(file); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler(file);} }];
             }
         }
         
@@ -684,8 +687,8 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //Replace any backslashes with forward slashes
-    fromPath = [fromPath stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
-    toPath = [toPath stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    fromPath = [fromPath stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
+    toPath = [toPath stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     //Work out just the share name from the path (The first directory in the string)
     NSString *shareName = [self shareNameFromPath:fromPath];
@@ -738,13 +741,13 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (success==NO || error) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             TOSMBSessionFile *file = [weakSelf itemAttributesAtPath:toPath error:&error];
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(file); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler(file);} }];
             }
         }
         
@@ -777,7 +780,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //Replace any backslashes with forward slashes
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     //Work out just the share name from the path (The first directory in the string)
     NSString *shareName = [self shareNameFromPath:path];
@@ -827,13 +830,13 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (success==NO || error) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             TOSMBSessionFile *file = [strongSelf itemAttributesAtPath:path error:&error];
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(file); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler(file);} }];
             }
         }
     };
@@ -859,7 +862,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     NSString *path = dirPath;
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
     
@@ -884,31 +887,37 @@ const NSTimeInterval kSessionTimeout = 30.0;
         return NO;
     }
     
-    size_t listCount = smb_stat_list_count(statList);
-    
     NSMutableArray *directories = [[NSMutableArray alloc] init];
+    NSMutableArray *fileItems = [NSMutableArray new];
     
-    if (listCount > 0){
-        for (NSInteger i = 0; i < listCount; i++) {
-            smb_stat item = smb_stat_list_at(statList, i);
-            const char* name = smb_stat_name(item);
-            NSString *itemName = [[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding];
-            if([itemName isEqualToString:@"."] || [itemName isEqualToString:@".."]){
-                continue;
-            }
-            TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
-            
-            if(items){
-                [*items addObject:file];
-            }
-            
-            if(file.directory){
-                [directories addObject:file];
+    [self.dsm_session inSMBCSession:^(smb_session *session) {
+        size_t listCount = 0;
+        listCount = smb_stat_list_count(statList);
+        if (listCount > 0){
+            for (NSInteger i = 0; i < listCount; i++) {
+                smb_stat item = smb_stat_list_at(statList, i);
+                const char* name = smb_stat_name(item);
+                NSString *itemName = [[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding];
+                if([itemName isEqualToString:@"."] || [itemName isEqualToString:@".."]){
+                    continue;
+                }
+                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
+                if(file){
+                    if(file.directory){
+                        [directories addObject:file];
+                    }
+                    else{
+                        [fileItems addObject:file];
+                    }
+                }
             }
         }
-    }
+        smb_stat_list_destroy(statList);
+    }];
     
-    smb_stat_list_destroy(statList);
+    if(items){
+        [*items addObjectsFromArray:fileItems];
+    }
     
     for(TOSMBSessionFile *dir in directories){
         BOOL result = [self recursiveContentOfDirectoryAtPath:dir.fullPath inShare:shareID items:items error:error];
@@ -933,7 +942,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     NSString *path = dirPath;
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
     
@@ -965,7 +974,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     NSString *path = filePath;
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     NSParameterAssert([self.dsm_session cachedShareIDForName:[self shareNameFromPath:path]]==shareID);
     
@@ -1008,7 +1017,7 @@ const NSTimeInterval kSessionTimeout = 30.0;
     }
     
     //Replace any backslashes with forward slashes
-    path = [path stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
+    path = [path stringByReplacingOccurrencesOfBackSlashWithForwardSlash];
     
     //Work out just the share name from the path (The first directory in the string)
     NSString *shareName = [self shareNameFromPath:path];
@@ -1035,9 +1044,11 @@ const NSTimeInterval kSessionTimeout = 30.0;
         }
     }
     else{
-        
-        BOOL directory = (smb_stat_get(stat, SMB_STAT_ISDIR) != 0);
-        smb_stat_destroy(stat);
+        __block BOOL directory = NO;
+        [self.dsm_session inSMBCSession:^(smb_session *session) {
+            directory = (smb_stat_get(stat, SMB_STAT_ISDIR) != 0);
+            smb_stat_destroy(stat);
+        }];
         
         if(directory){
             
@@ -1086,12 +1097,13 @@ const NSTimeInterval kSessionTimeout = 30.0;
                 result = 0;
             }
             else{
-                smb_stat_destroy(stat);
+                [self.dsm_session inSMBCSession:^(smb_session *session) {
+                    smb_stat_destroy(stat);
+                }];
                 if (error) {
                     resultError = errorForErrorCode(TOSMBSessionErrorCodeUnableToDeleteItem);
                     *error = resultError;
                 }
-                
             }
         }
     }
@@ -1119,12 +1131,12 @@ const NSTimeInterval kSessionTimeout = 30.0;
         if (success==NO) {
             strongSelf.needsReloadSession = YES;
             if (errorHandler) {
-                [strongSelf performCallBackWithBlock:^{ errorHandler(error); }];
+                [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
         }
         else {
             if (successHandler) {
-                [strongSelf performCallBackWithBlock:^{ successHandler(); }];
+                [strongSelf performCallBackWithBlock:^{ if(successHandler){successHandler();} }];
             }
         }
         
@@ -1162,61 +1174,15 @@ const NSTimeInterval kSessionTimeout = 30.0;
 #pragma mark - String Parsing -
 
 - (NSString *)shareNameFromPath:(NSString *)path{
-    NSString *shareName = [path copy];
-    //Remove any potential slashes at the start
-    if ([[shareName substringToIndex:2] isEqualToString:@"//"]) {
-        shareName = [shareName substringFromIndex:2];
-    }
-    else if ([[shareName substringToIndex:1] isEqualToString:@"/"]) {
-        shareName = [shareName substringFromIndex:1];
-    }
-    NSRange range = [shareName rangeOfString:@"/"];
-    if (range.location != NSNotFound){
-        shareName = [shareName substringWithRange:NSMakeRange(0, range.location)];
-    }
-    return shareName;
+    return [path shareNameFromPath];
 }
 
 - (NSString *)filePathExcludingShareNameFromPath:(NSString *)path{
-    NSString *resultPath = [path copy];
-    //Remove any potential slashes at the start
-    if ([[resultPath substringToIndex:2] isEqualToString:@"//"] || [[resultPath substringToIndex:2] isEqualToString:@"\\\\"]) {
-        resultPath = [resultPath substringFromIndex:2];
-    }
-    if ([[resultPath substringToIndex:1] isEqualToString:@"/"] || [[resultPath substringToIndex:1] isEqualToString:@"\\"]) {
-        resultPath = [resultPath substringFromIndex:1];
-    }
-    
-    NSRange range = [resultPath rangeOfString:@"/"];
-    if (range.location == NSNotFound) {
-        range = [resultPath rangeOfString:@"\\"];
-    }
-    
-    if (range.location != NSNotFound){
-        resultPath = [resultPath substringFromIndex:range.location+1];
-    }
-    
-    if ([resultPath length] > 1 && [resultPath hasSuffix:@"/"]) {
-        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
-    }
-    if ([resultPath length] > 1 && [resultPath hasSuffix:@"\\"]) {
-        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
-    }
-    
-    return resultPath;
+    return [path filePathExcludingShareNameFromPath];
 }
 
-
 - (NSString *)relativeSMBPathFromPath:(NSString *)path{
-    
-    //work out the remainder of the file path and create the search query
-    NSString *relativePath = [self filePathExcludingShareNameFromPath:path];
-    //prepend double backslashes
-    relativePath = [NSString stringWithFormat:@"\\%@",relativePath];
-    //replace any additional forward slashes with backslashes
-    relativePath = [relativePath stringByReplacingOccurrencesOfString:@"/" withString:@"\\"]; //replace forward slashes with backslashes
-    return relativePath;
-    
+    return [path relativeSMBPathFromPath];
 }
 
 @end
