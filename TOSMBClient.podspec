@@ -20,7 +20,17 @@ Pod::Spec.new do |s|
   'TOSMBClient/libdsm/compat/compat.c',
   'TOSMBClient/libdsm/compat/clock_gettime.c'
   s.vendored_libraries = 'TOSMBClient/libdsm/libtasn1/libtasn1.a'
-  s.public_header_files = ['TOSMBClient/*.h','TOSMBClient/libdsm/include/*.h']
+  s.public_header_files = 'TOSMBClient/TOSMBSessionUploadTask.h',
+  'TOSMBClient/TOSMBSessionFile.h',
+  'TOSMBClient/TOSMBSessionDownloadTask.h',
+  'TOSMBClient/TOSMBSession.h',
+  'TOSMBClient/TOSMBCSessionWrapper.h',
+  'TOSMBClient/TOSMBConstants.h',
+  'TOSMBClient/TONetBIOSNameServiceEntry.h',
+  'TOSMBClient/TONetBIOSNameService.h',
+  'TOSMBClient/TOHost.h',
+  'TOSMBClient/NSString+TOSMB.h',
+  'TOSMBClient/TOSMBClient.h'
   s.library = 'iconv'
   s.requires_arc = true
   s.xcconfig = { 'HEADER_SEARCH_PATHS' => "TOSMBClient/**" }
