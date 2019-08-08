@@ -8,7 +8,7 @@
 
 #import <Foundation/Foundation.h>
 #import "TOSMBConstants.h"
-#import "bdsm_netbios_ns.h"
+#import "netbios_ns.h"
 #import "TONetBIOSNameServiceEntry.h"
 
 @interface TONetBIOSNameServiceEntry()
