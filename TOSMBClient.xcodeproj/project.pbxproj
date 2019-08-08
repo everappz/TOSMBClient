@@ -34,6 +34,7 @@
 		AC8346302213F8E70073F4F9 /* TOSMBSession.h in Headers */ = {isa = PBXBuildFile; fileRef = AC8345B62213F8E70073F4F9 /* TOSMBSession.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AC8346392213F9300073F4F9 /* libdsm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8346362213F8F80073F4F9 /* libdsm.a */; };
 		AC83463B2213F9870073F4F9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC83463A2213F9870073F4F9 /* Foundation.framework */; };
+		AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -82,6 +83,7 @@
 		AC8345B62213F8E70073F4F9 /* TOSMBSession.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TOSMBSession.h; sourceTree = "<group>"; };
 		AC8346312213F8F80073F4F9 /* dsm.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = dsm.xcodeproj; path = libdsm/xcode/dsm.xcodeproj; sourceTree = "<group>"; };
 		AC83463A2213F9870073F4F9 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TOSMBCSessionWrapper+Private.h"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -148,6 +150,7 @@
 				AC83452D2213F8E60073F4F9 /* TOSMBSessionFile+Private.h */,
 				AC8345332213F8E60073F4F9 /* TOSMBSessionFile.m */,
 				AC8345372213F8E60073F4F9 /* TOSMBCSessionWrapper.m */,
+				AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */,
 				AC8345B42213F8E70073F4F9 /* TOSMBCSessionWrapper.h */,
 				AC37EC0822142A75000276F2 /* NSString+TOSMB.h */,
 				AC37EC0922142A75000276F2 /* NSString+TOSMB.m */,
@@ -173,6 +176,7 @@
 			files = (
 				AC8346282213F8E70073F4F9 /* TONetBIOSNameService.h in Headers */,
 				AC8345BE2213F8E70073F4F9 /* TOSMBConstants.h in Headers */,
+				AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */,
 				AC83462F2213F8E70073F4F9 /* TOSMBSessionUploadTask.h in Headers */,
 				AC8346302213F8E70073F4F9 /* TOSMBSession.h in Headers */,
 				AC8345C52213F8E70073F4F9 /* TOSMBClient.h in Headers */,

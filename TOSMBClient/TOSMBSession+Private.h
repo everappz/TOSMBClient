@@ -12,7 +12,7 @@
 #import "smb_stat.h"
 #import "smb_dir.h"
 #import "TOSMBCSessionWrapper.h"
-
+#import "TOSMBCSessionWrapper+Private.h"
 
 
 @interface TOSMBSession ()

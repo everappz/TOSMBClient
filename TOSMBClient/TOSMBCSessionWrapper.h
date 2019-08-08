@@ -7,7 +7,6 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "smb_session.h"
 
 
 @interface TOSMBCSessionWrapper : NSObject
@@ -22,12 +21,6 @@
 
 @property (nonatomic,copy) NSString *ipAddress;
 
-- (smb_tid)cachedShareIDForName:(NSString *)shareName;
-
-- (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName;
-
-- (void)removeCachedShareIDForName:(NSString *)shareName;
-
 - (NSString *)sessionKey;
 
 - (BOOL)isValid;
@@ -36,8 +29,6 @@
                               domain:(NSString *)domain
                             userName:(NSString *)userName
                             password:(NSString *)password;
-
-- (void)inSMBCSession:(void (^)(smb_session *session))block;
 
 - (void)close;
 

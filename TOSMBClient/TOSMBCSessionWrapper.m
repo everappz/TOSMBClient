@@ -7,6 +7,7 @@
 //
 
 #import "TOSMBCSessionWrapper.h"
+#import "TOSMBCSessionWrapper+Private.h"
 #import "TOSMBConstants.h"
 #import "TOSMBSession.h"
 #import "smb_share.h"
