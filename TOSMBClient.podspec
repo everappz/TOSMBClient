@@ -10,13 +10,12 @@ Pod::Spec.new do |s|
   s.source_files = 'TOSMBClient/*.{h,m}',
   'TOSMBClient/libdsm/xcode/**/*.{h,c}',
   'TOSMBClient/libdsm/xcode/*.{h,c}',
-  'TOSMBClient/libdsm/src/*.{c}',
+  'TOSMBClient/libdsm/src/*.{h,c}',
   'TOSMBClient/libdsm/libtasn1/**/*.{h,c}',
   'TOSMBClient/libdsm/include/**/*.{h,c}', 
   'TOSMBClient/libdsm/contrib/**/*.{h,c}',
   'TOSMBClient/libdsm/compat/*.{h,c}',
   s.vendored_libraries = 'TOSMBClient/libdsm/libtasn1/libtasn1.a'
-  s.header_mappings_dir = 'src/include'
   s.library = 'iconv'
   s.requires_arc = true
 end
