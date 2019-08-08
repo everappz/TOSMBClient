@@ -33,5 +33,5 @@ Pod::Spec.new do |s|
   'TOSMBClient/TOSMBClient.h'
   s.library = 'iconv'
   s.requires_arc = true
-  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "TOSMBClient/**" }
+  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "${PODS_ROOT}/BuildHeaders" }
 end
