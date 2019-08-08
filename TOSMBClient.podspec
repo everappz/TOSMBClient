@@ -9,6 +9,7 @@ Pod::Spec.new do |s|
   s.platform = :ios, '7.0'
   s.source_files = 'TOSMBClient/*.{h,m}',
   'TOSMBClient/libdsm/xcode/**/*.{h,c}',
+  'TOSMBClient/libdsm/xcode/*.{h,c}',
   'TOSMBClient/libdsm/src/*.{c}',
   'TOSMBClient/libdsm/libtasn1/**/*.{h,c}',
   'TOSMBClient/libdsm/include/**/*.{h,c}', 
