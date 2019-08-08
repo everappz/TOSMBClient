@@ -14,7 +14,11 @@ Pod::Spec.new do |s|
   'TOSMBClient/libdsm/libtasn1/**/*.{h,c}',
   'TOSMBClient/libdsm/include/**/*.{h,c}', 
   'TOSMBClient/libdsm/contrib/**/*.{h,c}',
-  'TOSMBClient/libdsm/compat/*.{h,c}',
+  'TOSMBClient/libdsm/compat/strndup.c',
+  'TOSMBClient/libdsm/compat/queue.h',
+  'TOSMBClient/libdsm/compat/compat.h',
+  'TOSMBClient/libdsm/compat/compat.c',
+  'TOSMBClient/libdsm/compat/clock_gettime.c'
   s.vendored_libraries = 'TOSMBClient/libdsm/libtasn1/libtasn1.a'
   s.public_header_files = ['TOSMBClient/*.h']
   s.library = 'iconv'
