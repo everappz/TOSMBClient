@@ -23,5 +23,10 @@ Pod::Spec.new do |s|
   s.public_header_files = ['TOSMBClient/*.h']
   s.library = 'iconv'
   s.requires_arc = true
-  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "${PODS_ROOT}/#{s.name}/#{s.name}/**" }
+  s.private_header_files = 'TOSMBClient/libdsm/**/*.h'
+  s.library = 'c++'
+  s.xcconfig = {
+      'CLANG_CXX_LANGUAGE_STANDARD' => 'gnu++14',
+      'CLANG_CXX_LIBRARY' => 'libc++'
+  }
 end
