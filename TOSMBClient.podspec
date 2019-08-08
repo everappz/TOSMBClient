@@ -17,6 +17,5 @@ Pod::Spec.new do |s|
   s.vendored_libraries = 'TOSMBClient/libdsm/libtasn1/libtasn1.a'
   s.header_mappings_dir = 'src/include'
   s.library = 'iconv'
-  s.xcconfig = { 'USER_HEADER_SEARCH_PATHS' => '"${PROJECT_DIR}/.."/**' }
   s.requires_arc = true
 end
