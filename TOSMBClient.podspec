@@ -23,5 +23,5 @@ Pod::Spec.new do |s|
   s.public_header_files = ['TOSMBClient/*.h']
   s.library = 'iconv'
   s.requires_arc = true
-  s.private_header_files = ['TOSMBClient/libdsm/xcode/*.h', 'TOSMBClient/libdsm/include/**/*.h', 'TOSMBClient/libdsm/include/*.h']
+  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "TOSMBClient/**" }
 end
