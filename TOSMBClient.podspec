@@ -16,6 +16,7 @@ Pod::Spec.new do |s|
   'TOSMBClient/libdsm/contrib/**/*.{h,c}',
   'TOSMBClient/libdsm/compat/*.{h,c}',
   s.vendored_libraries = 'TOSMBClient/libdsm/libtasn1/libtasn1.a'
+  s.public_header_files = ['TOSMBClient/*.h']
   s.library = 'iconv'
   s.requires_arc = true
 end
