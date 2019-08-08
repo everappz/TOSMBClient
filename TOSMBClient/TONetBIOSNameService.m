@@ -26,8 +26,8 @@
 #import "TONetBIOSNameService.h"
 #import "TONetBIOSNameServiceEntry+Private.h"
 
-#import "netbios_ns.h"
-#import "netbios_defs.h"
+#import "bdsm_netbios_ns.h"
+#import "bdsm_netbios_defs.h"
 
 const NSTimeInterval kTONetBIOSNameServiceDiscoveryTimeOut = 4.0f;
 
