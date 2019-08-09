@@ -31,7 +31,8 @@ Pod::Spec.new do |s|
   'TOSMBClient/TOHost.h',
   'TOSMBClient/NSString+TOSMB.h',
   'TOSMBClient/TOSMBClient.h'
+  s.private_header_files = 'TOSMBClient/libdsm/xcode/config.h'
   s.library = 'iconv'
   s.requires_arc = true
-  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "${PODS_ROOT}/#{s.name}/#{s.name}/**" }
+  s.xcconfig = { 'HEADER_SEARCH_PATHS' => "${PODS_ROOT}/#{s.name}/**" }
 end
