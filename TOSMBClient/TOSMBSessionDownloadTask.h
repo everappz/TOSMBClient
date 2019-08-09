@@ -123,3 +123,4 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 - (void)cancel;
 
 @end
+
