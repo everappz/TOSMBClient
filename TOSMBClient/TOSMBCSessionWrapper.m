@@ -101,7 +101,7 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
             STRONG_WEAK_SELF();
             cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
             if(shareID!=cachedShareID){
-                removeShare = YES;
+                removeShare = cachedShareID>0;
                 [strongSelf.shares setObject:@(shareID) forKey:shareName];
             }
             if(removeShare){
