@@ -68,7 +68,7 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 
 - (void)inSMBCSession:(void (^)(smb_session *session))block {
     TOSMBCSessionWrapper *currentSyncQueue = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperQueueSpecificKey);
-    assert(currentSyncQueue != self && "inSMBCSession: was called reentrantly on the same queue, which would lead to a deadlock");
+    NSParameterAssert(currentSyncQueue != self);
     WEAK_SELF();
     dispatch_sync(_queue, ^() {
         STRONG_WEAK_SELF();
