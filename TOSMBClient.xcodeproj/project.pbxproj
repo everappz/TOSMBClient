@@ -7,8 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		AC37EC0A22142A75000276F2 /* NSString+TOSMB.h in Headers */ = {isa = PBXBuildFile; fileRef = AC37EC0822142A75000276F2 /* NSString+TOSMB.h */; };
+		AC37EC0A22142A75000276F2 /* NSString+TOSMB.h in Headers */ = {isa = PBXBuildFile; fileRef = AC37EC0822142A75000276F2 /* NSString+TOSMB.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		AC37EC0B22142A75000276F2 /* NSString+TOSMB.m in Sources */ = {isa = PBXBuildFile; fileRef = AC37EC0922142A75000276F2 /* NSString+TOSMB.m */; };
+		AC69BE5C2652F2ED00DEEF08 /* TOSMBSessionTransferTask.h in Headers */ = {isa = PBXBuildFile; fileRef = AC69BE5A2652F2ED00DEEF08 /* TOSMBSessionTransferTask.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		AC69BE5D2652F2ED00DEEF08 /* TOSMBSessionTransferTask.m in Sources */ = {isa = PBXBuildFile; fileRef = AC69BE5B2652F2ED00DEEF08 /* TOSMBSessionTransferTask.m */; };
+		AC69BE602652F33100DEEF08 /* TOSMBSessionTransferTask+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = AC69BE5F2652F33100DEEF08 /* TOSMBSessionTransferTask+Private.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		AC834482221368E80073F4F9 /* libiconv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = AC834481221368E80073F4F9 /* libiconv.tbd */; };
 		AC8345BA2213F8E70073F4F9 /* TOSMBSessionFile+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = AC83452D2213F8E60073F4F9 /* TOSMBSessionFile+Private.h */; settings = {ATTRIBUTES = (Private, ); }; };
 		AC8345BB2213F8E70073F4F9 /* TONetBIOSNameService.m in Sources */ = {isa = PBXBuildFile; fileRef = AC83452E2213F8E60073F4F9 /* TONetBIOSNameService.m */; };
@@ -34,7 +37,7 @@
 		AC8346302213F8E70073F4F9 /* TOSMBSession.h in Headers */ = {isa = PBXBuildFile; fileRef = AC8345B62213F8E70073F4F9 /* TOSMBSession.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AC8346392213F9300073F4F9 /* libdsm.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8346362213F8F80073F4F9 /* libdsm.a */; };
 		AC83463B2213F9870073F4F9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC83463A2213F9870073F4F9 /* Foundation.framework */; };
-		AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */; };
+		AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */ = {isa = PBXBuildFile; fileRef = AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */; settings = {ATTRIBUTES = (Private, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +60,9 @@
 /* Begin PBXFileReference section */
 		AC37EC0822142A75000276F2 /* NSString+TOSMB.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NSString+TOSMB.h"; sourceTree = "<group>"; };
 		AC37EC0922142A75000276F2 /* NSString+TOSMB.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "NSString+TOSMB.m"; sourceTree = "<group>"; };
+		AC69BE5A2652F2ED00DEEF08 /* TOSMBSessionTransferTask.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = TOSMBSessionTransferTask.h; sourceTree = "<group>"; };
+		AC69BE5B2652F2ED00DEEF08 /* TOSMBSessionTransferTask.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TOSMBSessionTransferTask.m; sourceTree = "<group>"; };
+		AC69BE5F2652F33100DEEF08 /* TOSMBSessionTransferTask+Private.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "TOSMBSessionTransferTask+Private.h"; sourceTree = "<group>"; };
 		AC834429221367D70073F4F9 /* TOSMBClient.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = TOSMBClient.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC834481221368E80073F4F9 /* libiconv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libiconv.tbd; path = usr/lib/libiconv.tbd; sourceTree = SDKROOT; };
 		AC83452D2213F8E60073F4F9 /* TOSMBSessionFile+Private.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "TOSMBSessionFile+Private.h"; sourceTree = "<group>"; };
@@ -140,18 +146,21 @@
 				AC8345B62213F8E70073F4F9 /* TOSMBSession.h */,
 				AC8345392213F8E60073F4F9 /* TOSMBSession+Private.h */,
 				AC8345352213F8E60073F4F9 /* TOSMBSession.m */,
-				AC8345AF2213F8E70073F4F9 /* TOSMBSessionDownloadTask.h */,
-				AC8345342213F8E60073F4F9 /* TOSMBSessionDownloadTask.m */,
+				AC69BE5A2652F2ED00DEEF08 /* TOSMBSessionTransferTask.h */,
+				AC69BE5F2652F33100DEEF08 /* TOSMBSessionTransferTask+Private.h */,
+				AC69BE5B2652F2ED00DEEF08 /* TOSMBSessionTransferTask.m */,
 				AC8345B52213F8E70073F4F9 /* TOSMBSessionUploadTask.h */,
 				AC8345362213F8E60073F4F9 /* TOSMBSessionUploadTask.m */,
+				AC8345AF2213F8E70073F4F9 /* TOSMBSessionDownloadTask.h */,
+				AC8345342213F8E60073F4F9 /* TOSMBSessionDownloadTask.m */,
 				AC83452F2213F8E60073F4F9 /* TOHost.h */,
 				AC8345AD2213F8E70073F4F9 /* TOHost.m */,
 				AC8345B02213F8E70073F4F9 /* TOSMBSessionFile.h */,
 				AC83452D2213F8E60073F4F9 /* TOSMBSessionFile+Private.h */,
 				AC8345332213F8E60073F4F9 /* TOSMBSessionFile.m */,
-				AC8345372213F8E60073F4F9 /* TOSMBCSessionWrapper.m */,
-				AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */,
 				AC8345B42213F8E70073F4F9 /* TOSMBCSessionWrapper.h */,
+				AC94A98A22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h */,
+				AC8345372213F8E60073F4F9 /* TOSMBCSessionWrapper.m */,
 				AC37EC0822142A75000276F2 /* NSString+TOSMB.h */,
 				AC37EC0922142A75000276F2 /* NSString+TOSMB.m */,
 				AC8345382213F8E60073F4F9 /* TOSMBClient.h */,
@@ -175,15 +184,17 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC8346282213F8E70073F4F9 /* TONetBIOSNameService.h in Headers */,
+				AC69BE5C2652F2ED00DEEF08 /* TOSMBSessionTransferTask.h in Headers */,
 				AC8345BE2213F8E70073F4F9 /* TOSMBConstants.h in Headers */,
-				AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */,
+				AC8346292213F8E70073F4F9 /* TOSMBSessionDownloadTask.h in Headers */,
 				AC83462F2213F8E70073F4F9 /* TOSMBSessionUploadTask.h in Headers */,
 				AC8346302213F8E70073F4F9 /* TOSMBSession.h in Headers */,
 				AC8345C52213F8E70073F4F9 /* TOSMBClient.h in Headers */,
 				AC83462A2213F8E70073F4F9 /* TOSMBSessionFile.h in Headers */,
+				AC69BE602652F33100DEEF08 /* TOSMBSessionTransferTask+Private.h in Headers */,
 				AC37EC0A22142A75000276F2 /* NSString+TOSMB.h in Headers */,
+				AC94A98B22FCD4C40048E6AC /* TOSMBCSessionWrapper+Private.h in Headers */,
 				AC8345BC2213F8E70073F4F9 /* TOHost.h in Headers */,
-				AC8346292213F8E70073F4F9 /* TOSMBSessionDownloadTask.h in Headers */,
 				AC8345BF2213F8E70073F4F9 /* TONetBIOSNameServiceEntry.h in Headers */,
 				AC8345BA2213F8E70073F4F9 /* TOSMBSessionFile+Private.h in Headers */,
 				AC8345BD2213F8E70073F4F9 /* TONetBIOSNameServiceEntry+Private.h in Headers */,
@@ -284,6 +295,7 @@
 				AC83462C2213F8E70073F4F9 /* TONetBIOSNameServiceEntry.m in Sources */,
 				AC83462D2213F8E70073F4F9 /* TOSMBConstants.m in Sources */,
 				AC8345C42213F8E70073F4F9 /* TOSMBCSessionWrapper.m in Sources */,
+				AC69BE5D2652F2ED00DEEF08 /* TOSMBSessionTransferTask.m in Sources */,
 				AC8345BB2213F8E70073F4F9 /* TONetBIOSNameService.m in Sources */,
 				AC37EC0B22142A75000276F2 /* NSString+TOSMB.m in Sources */,
 			);
@@ -411,6 +423,10 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CFLAGS = (
+					"-DNS_BLOCK_ASSERTIONS=1",
+					"-DNDEBUG",
+				);
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -468,6 +484,10 @@
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/TOSMBClient/libdsm/libtasn1",
+				);
+				OTHER_CFLAGS = (
+					"-DNS_BLOCK_ASSERTIONS=1",
+					"-DNDEBUG",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.to.SMBClient;
 				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";

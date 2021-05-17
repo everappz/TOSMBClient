@@ -32,6 +32,7 @@
 const NSTimeInterval kTONetBIOSNameServiceDiscoveryTimeOut = 4.0f;
 
 #pragma mark - Class Private Interface -
+
 @interface TONetBIOSNameService ()
 
 @property (nonatomic, assign) netbios_ns *nameService;

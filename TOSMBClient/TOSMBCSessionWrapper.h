@@ -11,15 +11,15 @@
 
 @interface TOSMBCSessionWrapper : NSObject
 
-@property (nonatomic,strong) NSDate *lastRequestDate;
+@property (atomic,strong) NSDate *lastRequestDate;
 
-@property (nonatomic,copy) NSString *userName;
+@property (atomic,copy) NSString *userName;
 
-@property (nonatomic,copy) NSString *password;
+@property (atomic,copy) NSString *password;
 
-@property (nonatomic,copy) NSString *domain;
+@property (atomic,copy) NSString *domain;
 
-@property (nonatomic,copy) NSString *ipAddress;
+@property (atomic,copy) NSString *ipAddress;
 
 - (NSString *)sessionKey;
 

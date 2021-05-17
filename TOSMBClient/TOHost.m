@@ -7,19 +7,18 @@
 //
 
 #import "TOHost.h"
+#import <SystemConfiguration/SystemConfiguration.h>
 #import <CFNetwork/CFNetwork.h>
 #import <netinet/in.h>
+#import <net/ethernet.h>
+#import <net/if_dl.h>
+#import <net/if.h>
 #import <netdb.h>
 #import <ifaddrs.h>
 #import <arpa/inet.h>
-#import <net/ethernet.h>
-#import <net/if_dl.h>
-#import <SystemConfiguration/SystemConfiguration.h>
-#import <arpa/inet.h>
-#import <net/if.h>
 #import <unistd.h>
 #import <dlfcn.h>
-#import <arpa/inet.h>
+
 
 @implementation TOHost
 

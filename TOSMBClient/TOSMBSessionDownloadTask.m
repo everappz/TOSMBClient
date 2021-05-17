@@ -20,56 +20,18 @@
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 // -------------------------------------------------------------------------------
 
-#import <CommonCrypto/CommonDigest.h>
-#import <UIKit/UIKit.h>
 #import "TOSMBSessionDownloadTask.h"
-#import "TOSMBClient.h"
-#import "smb_session.h"
-#import "smb_share.h"
-#import "smb_file.h"
-#import "smb_defs.h"
-#import "TOSMBSession+Private.h"
-#import "TOSMBSessionFile+Private.h"
-#import "TOSMBSession.h"
-
+#import "TOSMBSessionTransferTask+Private.h"
 
 @interface TOSMBSessionDownloadTask ()
 
-@property (assign, readwrite) TOSMBSessionTransferTaskState state;
-
-@property (nonatomic, copy) NSString *sourceFilePath;
-@property (nonatomic, copy) NSString *destinationFilePath;
 @property (nonatomic, copy) NSString *tempFilePath;
+@property (nonatomic, strong) NSMutableData *callbackData;
 
-@property (nonatomic, weak) TOSMBSession *sessionObject;
-@property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
 @property (nonatomic, strong) TOSMBSessionFile *file;
-@property (nonatomic, strong) NSBlockOperation *downloadOperation;
 
-@property (assign,readwrite) int64_t countOfBytesReceived;
-@property (assign,readwrite) int64_t countOfBytesExpectedToReceive;
-
-/** Feedback handlers */
-@property (nonatomic, copy) void (^progressHandler)(uint64_t totalBytesWritten, uint64_t totalBytesExpected);
-@property (nonatomic, copy) void (^successHandler)(NSString *filePath);
-@property (nonatomic, copy) void (^failHandler)(NSError *error);
-
-/* Download methods */
-- (void)setupDownloadOperation;
-- (void)performDownloadWithOperation:(NSBlockOperation *)weakOperation;
-- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID;
-
-/* File Path Methods */
-- (NSString *)hashForFilePath;
-- (NSString *)filePathForTemporaryDestination;
-- (NSString *)finalFilePathForDownloadedFile;
-- (NSString *)documentsDirectory;
-
-/* Feedback events sent to either the delegate or callback blocks */
-- (void)didSucceedWithFilePath:(NSString *)filePath;
-- (void)didFailWithError:(NSError *)error;
-- (void)didUpdateWriteBytes:(NSData *)bytesWritten;
-- (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected;
+@property (nonatomic, assign) int64_t countOfBytesReceived;
+@property (nonatomic, assign) int64_t countOfBytesExpectedToReceive;
 
 @end
 
@@ -81,57 +43,46 @@
     return nil;
 }
 
-- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate{
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                       delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate
+{
     if (self = [super init]) {
-        _sessionObject = session;
-        _dsm_session = session.dsm_session;
-        _sourceFilePath = [filePath copy];
-        _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
-        _delegate = delegate;
-        _seekOffset = NSNotFound;
-        _tempFilePath = [self filePathForTemporaryDestination];
+        self.session = session;
+        self.sourceFilePath = [filePath copy];
+        self.destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
+        self.delegate = delegate;
+        self.seekOffset = NSNotFound;
+        self.tempFilePath = [self filePathForTemporaryDestination];
     }
-    
     return self;
 }
 
-- (instancetype)initWithSession:(TOSMBSession *)session filePath:(NSString *)filePath destinationPath:(NSString *)destinationPath progressHandler:(id)progressHandler successHandler:(id)successHandler failHandler:(id)failHandler{
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                progressHandler:(TOSMBSessionTransferTaskProgressHandler)progressHandler
+                 successHandler:(TOSMBSessionTransferTaskSuccessHandler)successHandler
+                    failHandler:(TOSMBSessionTransferTaskFailHandler)failHandler
+{
     if (self = [super init]) {
-        _sessionObject = session;
-        _dsm_session = session.dsm_session;
-        _sourceFilePath = [filePath copy];
-        _destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
-        _progressHandler = [progressHandler copy];
-        _successHandler = [successHandler copy];
-        _failHandler = [failHandler copy];
-        _seekOffset = NSNotFound;
-        _tempFilePath = [self filePathForTemporaryDestination];
+        self.session = session;
+        self.sourceFilePath = [filePath copy];
+        self.destinationFilePath = destinationPath.length ? [destinationPath copy] : [self documentsDirectory];
+        self.progressHandler = [progressHandler copy];
+        self.successHandler = [successHandler copy];
+        self.failHandler = [failHandler copy];
+        self.seekOffset = NSNotFound;
+        self.tempFilePath = [self filePathForTemporaryDestination];
     }
-    
     return self;
-}
-
-- (void)dealloc{
-    [self.downloadOperation cancel];
 }
 
 #pragma mark - Temporary Destination Methods -
 
 - (NSString *)filePathForTemporaryDestination{
-    NSString *fileName = [[self hashForFilePath] stringByAppendingPathExtension:@"smb.data"];
-    return [NSTemporaryDirectory() stringByAppendingPathComponent:fileName];
-}
-
-- (NSString *)hashForFilePath{
-    NSString *filePath = self.sourceFilePath.lowercaseString;
-    NSData *data = [filePath dataUsingEncoding:NSUTF8StringEncoding];
-    uint8_t digest[CC_SHA1_DIGEST_LENGTH];
-    CC_SHA1(data.bytes, (unsigned int)data.length, digest);
-    NSMutableString *output = [NSMutableString stringWithCapacity:CC_SHA1_DIGEST_LENGTH * 2];
-    for (int i = 0; i < CC_SHA1_DIGEST_LENGTH; i++){
-        [output appendFormat:@"%02x", digest[i]];
-    }
-    return [NSString stringWithString:output];
+    return [NSTemporaryDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"%@.tmp",[NSString TOSMB_uuidString]]];
 }
 
 - (NSString *)finalFilePathForDownloadedFile{
@@ -172,72 +123,26 @@
 
 #pragma mark - Public Control Methods -
 
-- (void)resume{
-    if (self.state == TOSMBSessionTransferTaskStateRunning){
-        return;
-    }
-    [self setupDownloadOperation];
-    [self.sessionObject.dataQueue addOperation:self.downloadOperation];
-    self.state = TOSMBSessionTransferTaskStateRunning;
-}
-
-- (void)suspend{
-    if (self.state != TOSMBSessionTransferTaskStateRunning){
-        return;
-    }
-    [self.downloadOperation cancel];
-    self.state = TOSMBSessionTransferTaskStateSuspended;
-    self.downloadOperation = nil;
-}
-
 - (void)cancel{
-    if (self.state != TOSMBSessionTransferTaskStateRunning){
-        return;
-    }
-    [self.downloadOperation cancel];
-    self.downloadOperation = nil;
-    WEAK_SELF();
-    id deleteBlock = ^{
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
-        @try{[[NSFileManager defaultManager] removeItemAtPath:strongSelf.tempFilePath error:nil];}@catch(NSException *exc){}
-    };
-    NSBlockOperation *deleteOperation = [[NSBlockOperation alloc] init];
-    [deleteOperation addExecutionBlock:deleteBlock];
-    [self.sessionObject.dataQueue addOperation:deleteOperation];
-    self.state = TOSMBSessionTransferTaskStateCancelled;
+    [super cancel];
+    @try{[[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];}@catch(NSException *exc){}
 }
-
-#pragma mark - Feedback Methods -
 
 #pragma mark - Private Control Methods -
-- (void)fail
-{
+
+- (void)fail{
     if (self.state != TOSMBSessionTransferTaskStateRunning){
         return;
     }
-    
     [self cancel];
-    
     self.state = TOSMBSessionTransferTaskStateFailed;
 }
 
-- (BOOL)canBeResumed{
-    if ([[NSFileManager defaultManager] fileExistsAtPath:self.tempFilePath] == NO){
-        return NO;
-    }
-    NSDate *modificationTime = [[[NSFileManager defaultManager] attributesOfItemAtPath:self.tempFilePath error:nil] fileModificationDate];
-    if ([modificationTime isEqual:self.file.modificationTime] == NO) {
-        return NO;
-    }
-    return YES;
-}
-
 - (void)didSucceedWithFilePath:(NSString *)filePath{
-    WEAK_SELF();
-    [self.sessionObject performCallBackWithBlock:^{
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
+    TOSMBMakeWeakReference();
+    [self.session performCallBackWithBlock:^{
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
         if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didFinishDownloadingToPath:)]){
             [strongSelf.delegate downloadTask:strongSelf didFinishDownloadingToPath:filePath];
         }
@@ -248,10 +153,10 @@
 }
 
 - (void)didFailWithError:(NSError *)error{
-    WEAK_SELF();
-    [self.sessionObject performCallBackWithBlock:^{
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
+    TOSMBMakeWeakReference();
+    [self.session performCallBackWithBlock:^{
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
         if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didCompleteWithError:)]){
             [strongSelf.delegate downloadTask:strongSelf didCompleteWithError:error];
         }
@@ -261,25 +166,51 @@
     }];
 }
 
-- (void)didUpdateWriteBytes:(NSData *)bytesWritten{
-    WEAK_SELF();
-    [self.sessionObject performCallBackWithBlock:^{
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
-        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
-            [strongSelf.delegate downloadTask:strongSelf didWriteBytes:bytesWritten totalBytesReceived:strongSelf.countOfBytesReceived totalBytesExpectedToReceive:strongSelf.countOfBytesExpectedToReceive];
-        }
+- (BOOL)shouldNotifyWithProgress:(float)progress{
+    float lastProgress = self.lastProgress;
+    return (progress>0) && (ABS(lastProgress - progress) > 0.1 ||
+                            (fabs(progress - 1.0) < FLT_EPSILON) ||
+                            (fabs(progress) < FLT_EPSILON));
+}
+
+- (void)progressDidChange:(float)progress{
+    if([self shouldNotifyWithProgress:progress] == NO){
+        return;
+    }
+    self.lastProgress = progress;
+    TOSMBMakeWeakReference();
+    [self.session performCallBackWithBlock:^{
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
         if (strongSelf.progressHandler){
             strongSelf.progressHandler(strongSelf.countOfBytesReceived, strongSelf.countOfBytesExpectedToReceive);
         }
     }];
 }
 
+- (void)didUpdateWriteBytes:(NSData *)bytesWritten{
+    TOSMBMakeWeakReference();
+    [self.session performCallBackWithBlock:^{
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didWriteBytes:totalBytesReceived:totalBytesExpectedToReceive:)]){
+            [strongSelf.delegate downloadTask:strongSelf
+                                didWriteBytes:bytesWritten
+                           totalBytesReceived:strongSelf.countOfBytesReceived
+                  totalBytesExpectedToReceive:strongSelf.countOfBytesExpectedToReceive];
+        }
+    }];
+    if (self.countOfBytesExpectedToReceive > 0){
+        float currentProgress = (float)self.countOfBytesReceived/(float)self.countOfBytesExpectedToReceive;
+        [self progressDidChange:currentProgress];
+    }
+}
+
 - (void)didResumeAtOffset:(uint64_t)bytesWritten totalBytesExpected:(uint64_t)totalBytesExpected{
-    WEAK_SELF();
-    [self.sessionObject performCallBackWithBlock:^{
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
+    TOSMBMakeWeakReference();
+    [self.session performCallBackWithBlock:^{
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
         if (strongSelf.delegate && [strongSelf.delegate respondsToSelector:@selector(downloadTask:didResumeAtOffset:totalBytesExpectedToReceive:)]){
             [strongSelf.delegate downloadTask:strongSelf didResumeAtOffset:bytesWritten totalBytesExpectedToReceive:totalBytesExpected];
         }
@@ -288,93 +219,75 @@
 
 #pragma mark - Downloading -
 
-- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath fullPath:(NSString *)fullPath inTree:(smb_tid)treeID{
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath
+                                               fullPath:(NSString *)fullPath
+                                                 inTree:(smb_tid)treeID
+{
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    if(self.dsm_session!=NULL){
-        __block smb_stat fileStat = NULL;
-        [self.dsm_session inSMBCSession:^(smb_session *session) {
-            fileStat = smb_fstat(session, treeID, fileCString);
-        }];
-        if (fileStat==NULL){
-            return nil;
-        }
-        TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]];
-        [self.dsm_session inSMBCSession:^(smb_session *session) {
-            smb_stat_destroy(fileStat);
-        }];
-        return file;
+    __block smb_stat fileStat = NULL;
+    [self.session inSMBCSession:^(smb_session *session) {
+        fileStat = smb_fstat(session, treeID, fileCString);
+    }];
+    if (fileStat == NULL) {
+        return nil;
     }
-    return nil;
+    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat
+                                            parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]];
+    [self.session inSMBCSession:^(smb_session *session) {
+        smb_stat_destroy(fileStat);
+    }];
+    return file;
 }
 
-- (void)setupDownloadOperation{
-    
-    if (self.downloadOperation){
-        return;
-    }
-    
+- (void)startTaskInternal{
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    WEAK_SELF();
-    WEAK_OPERATION();
-    
+    TOSMBMakeWeakReference();
+    TOSMBMakeWeakReferenceForOperation();
     id executionBlock = ^{
-        
-        CHECK_IF_WEAK_OPERATION_IS_CANCELLED_OR_NIL_AND_RETURN();
-        CHECK_IF_WEAK_SELF_IS_NIL_AND_RETURN();
-        STRONG_WEAK_SELF();
-        STRONG_WEAK_OPERATION();
-        
-        [strongSelf performDownloadWithOperation:strongOperation];
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf performStartDownload];
     };
     [operation addExecutionBlock:executionBlock];
-    operation.completionBlock = ^{
-        STRONG_WEAK_SELF();
-        strongSelf.downloadOperation = nil;
-    };
-    
-    self.downloadOperation = operation;
+    [self.session addRequestOperation:operation];
+    [self addCancellableOperation:operation];
 }
 
-- (void)performDownloadWithOperation:(NSBlockOperation *)operation{
+- (void)cleanUp{
+    __block smb_fd fileID = self.fileID;
+    if (fileID > 0) {
+        [self.session inSMBCSession:^(smb_session *session) {
+            smb_fclose(session, fileID);
+        }];
+    }
+}
+
+- (void)performStartDownload{
     
-    NSParameterAssert(self.dsm_session!=nil && self.sessionObject!=nil);
-    
-    if (operation.isCancelled || self.dsm_session==nil || self.sessionObject==nil){
+    if (self.isCancelled || self.session==nil) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         return;
     }
     
-    __block smb_tid treeID = 0;
-    __block smb_fd fileID = 0;
-    
-    //---------------------------------------------------------------------------------------
-    //Set up a cleanup block that'll release any handles before cancellation
-    WEAK_SELF();
-    void (^cleanup)(void) = ^{
-        STRONG_WEAK_SELF();
-        if (fileID){
-            [strongSelf.dsm_session inSMBCSession:^(smb_session *session) {
-                smb_fclose(session, fileID);
-            }];
-        }
-    };
+    self.treeID = 0;
+    self.fileID = 0;
     
     //---------------------------------------------------------------------------------------
     //Connect to SMB device
     
     //First, check to make sure the file is there, and to acquire its attributes
-    NSError *error = [self.sessionObject attemptConnection];
-    self.dsm_session = self.sessionObject.dsm_session;
+    NSError *error = [self.session attemptConnection];
     
     if (error) {
         [self didFailWithError:error];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
-    if (operation.isCancelled) {
+    if (self.isCancelled) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
@@ -382,53 +295,56 @@
     //Connect to share
     
     //Next attach to the share we'll be using
-    NSString *shareName = [self.sessionObject shareNameFromPath:self.sourceFilePath];
+    NSString *shareName = [TOSMBSession shareNameFromPath:self.sourceFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-    treeID = [self.dsm_session cachedShareIDForName:shareName];
+    __block smb_tid treeID = [self.session cachedShareIDForName:shareName];
     
-    if(treeID==0){
-        [self.dsm_session inSMBCSession:^(smb_session *session) {
+    if (treeID == 0) {
+        [self.session inSMBCSession:^(smb_session *session) {
             smb_tree_connect(session, shareCString, &treeID);
         }];
     }
-    if (treeID==0) {
-        [self.dsm_session removeCachedShareIDForName:shareName];
+    if (treeID == 0) {
+        [self.session removeCachedShareIDForName:shareName];
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     else{
-        [self.dsm_session cacheShareID:treeID forName:shareName];
+        [self.session cacheShareID:treeID forName:shareName];
     }
+    self.treeID = treeID;
     
-    if (operation.isCancelled) {
+    if (self.isCancelled) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
     //---------------------------------------------------------------------------------------
     //Find the target file
     
-    NSString *formattedPath = [self.sessionObject relativeSMBPathFromPath:self.sourceFilePath];
+    NSString *formattedPath = [TOSMBSession relativeSMBPathFromPath:self.sourceFilePath];
     
     //Get the file info we'll be working off
-    self.file = [self requestFileForItemAtFormattedPath:formattedPath fullPath:self.sourceFilePath inTree:treeID];
+    self.file = [self requestFileForItemAtFormattedPath:formattedPath
+                                               fullPath:self.sourceFilePath
+                                                 inTree:treeID];
     if (self.file == nil) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
-    if (operation.isCancelled) {
+    if (self.isCancelled) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
     if (self.file.directory) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeDirectoryDownloaded)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
@@ -436,19 +352,22 @@
     
     //---------------------------------------------------------------------------------------
     //Open the file handle
-    [self.dsm_session inSMBCSession:^(smb_session *session) {
-        smb_fopen(session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO,&fileID);
+    __block smb_fd fileID = 0;
+    [self.session inSMBCSession:^(smb_session *session) {
+        smb_fopen(session, treeID, [formattedPath cStringUsingEncoding:NSUTF8StringEncoding], SMB_MOD_RO, &fileID);
     }];
     
-    if (fileID==0) {
+    if (fileID == 0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileNotFound)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
-    if (operation.isCancelled) {
+    self.fileID = fileID;
+    
+    if (self.isCancelled) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
@@ -457,79 +376,151 @@
     //Start downloading
     
     //Create the directories to the download destination
-    [[NSFileManager defaultManager] createDirectoryAtPath:[self.tempFilePath stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:nil];
+    [[NSFileManager defaultManager] createDirectoryAtPath:[self.tempFilePath stringByDeletingLastPathComponent]
+                              withIntermediateDirectories:YES
+                                               attributes:nil
+                                                    error:nil];
     
     //Create a new blank file to write to
-    if (self.canBeResumed == NO){
-        [[NSFileManager defaultManager] createFileAtPath:self.tempFilePath contents:nil attributes:nil];
-    }
+    [[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];
+    [[NSFileManager defaultManager] createFileAtPath:self.tempFilePath contents:nil attributes:nil];
     
     //Open a handle to the file and skip ahead if we're resuming
     NSFileHandle *fileHandle = [NSFileHandle fileHandleForWritingAtPath:self.tempFilePath];
+    self.fileHandle = fileHandle;
+    
     unsigned long long seekOffset = (ssize_t)[fileHandle seekToEndOfFile];
-    if(self.seekOffset!=NSNotFound){
+    if (self.seekOffset != NSNotFound) {
         seekOffset = self.seekOffset;
     }
     self.countOfBytesReceived = seekOffset;
     
     if (seekOffset > 0) {
-        [self.dsm_session inSMBCSession:^(smb_session *session) {
+        [self.session inSMBCSession:^(smb_session *session) {
             smb_fseek(session, fileID, (ssize_t)seekOffset, SMB_SEEK_SET);
         }];
-        [self didResumeAtOffset:seekOffset totalBytesExpected:self.countOfBytesExpectedToReceive];
+        [self didResumeAtOffset:seekOffset
+             totalBytesExpected:self.countOfBytesExpectedToReceive];
     }
     
     //Perform the file download
-    __block int64_t bytesRead = 0;
-    const NSInteger bufferSize = 32768;
-    const NSInteger callbackDataBufferSize = 5*bufferSize;
-    NSMutableData *callbackData = [[NSMutableData alloc] init];
+    self.callbackData = [[NSMutableData alloc] init];
+    [self downloadNextChunk];
+    
+}
+
+- (void)downloadNextChunk {
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    TOSMBMakeWeakReference();
+    TOSMBMakeWeakReferenceForOperation();
+    id executionBlock = ^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        int result = [strongSelf performDownloadNextChunk];
+        if (result == 1) {
+            [strongSelf downloadNextChunkAfterDelay];
+        }
+        else if (result == 0) {
+            [strongSelf finishDownload];
+        }
+    };
+    [operation addExecutionBlock:executionBlock];
+    [self.session addRequestOperation:operation];
+    [self addCancellableOperation:operation];
+}
+
+- (void)downloadNextChunkAfterDelay {
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    TOSMBMakeWeakReferenceForOperation();
+    TOSMBMakeWeakReference();
+    id executionBlock = ^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf performSelector:@selector(downloadNextChunk) withObject:nil afterDelay:0.1];
+    };
+    [operation addExecutionBlock:executionBlock];
+    [[NSOperationQueue mainQueue] addOperation:operation];
+    [self addCancellableOperation:operation];
+}
+
+- (int)performDownloadNextChunk{
+    NSInteger bufferSize = kTOSMBSessionTransferTaskBufferSize;
+    NSInteger callbackDataBufferSize = kTOSMBSessionTransferTaskCallbackDataBufferSize;
+    
     char *buffer = malloc(bufferSize);
     
-    @autoreleasepool {
-        do {
-            
-            [self.dsm_session inSMBCSession:^(smb_session *session) {
-                bytesRead = smb_fread(session, fileID, buffer, bufferSize);
-            }];
-            
-            if (bytesRead < 0) {
-                [self fail];
-                [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
-                break;
-            }
-            
-            //Save them to the file handle (And ensure the NSData object is flushed immediately)
-            NSData *data = [NSData dataWithBytes:buffer length:bytesRead];
-            @try {
-                [fileHandle writeData:data];
-                
-                //Ensure the data is properly written to disk before proceeding
-                [fileHandle synchronizeFile];
-            } @catch (NSException *exception) {}
-            
-            if (operation.isCancelled){
-                break;
-            }
-            self.countOfBytesReceived += bytesRead;
-            [callbackData appendData:data];
-            if(callbackData.length>=callbackDataBufferSize || bytesRead==0){
-                [self didUpdateWriteBytes:callbackData];
-                callbackData = [[NSMutableData alloc] init];
-            }
-            
-        } while (bytesRead > 0);
-        
+    __block int64_t bytesRead = 0;
+    __block smb_fd fileID = self.fileID;
+    
+    [self.session inSMBCSession:^(smb_session *session) {
+        bytesRead = smb_fread(session, fileID, buffer, bufferSize);
+    }];
+    
+    if (bytesRead < 0) {
+        [self fail];
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFileDownloadFailed)];
+        [self cleanUp];
+        return -1;
     }
-    //Set the modification date to match the one on the SMB device so we can compare the two at a later date
-    [[NSFileManager defaultManager] setAttributes:@{NSFileModificationDate:self.file.modificationTime} ofItemAtPath:self.tempFilePath error:nil];
+    
+    //Save them to the file handle (And ensure the NSData object is flushed immediately)
+    NSData *data = [NSData dataWithBytes:buffer length:bytesRead];
+    @try {
+        [self.fileHandle writeData:data];
+        
+        //Ensure the data is properly written to disk before proceeding
+        [self.fileHandle synchronizeFile];
+    } @catch (NSException *exception) {}
+    
+    if (self.isCancelled){
+        [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
+        [self cleanUp];
+        return -1;
+    }
+    self.countOfBytesReceived += bytesRead;
+    [self.callbackData appendData:data];
+    if (self.callbackData.length >= callbackDataBufferSize || bytesRead == 0) {
+        [self didUpdateWriteBytes:self.callbackData];
+        self.callbackData = [[NSMutableData alloc] init];
+    }
     
     free(buffer);
-    [fileHandle closeFile];
     
-    if (operation.isCancelled  || self.state != TOSMBSessionTransferTaskStateRunning) {
+    return bytesRead > 0 ? 1 : 0;
+}
+
+- (void)finishDownload{
+    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    TOSMBMakeWeakReference();
+    TOSMBMakeWeakReferenceForOperation();
+    id executionBlock = ^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf performFinishDownload];
+    };
+    [operation addExecutionBlock:executionBlock];
+    [self.session.requestsQueue addOperation:operation];
+    [self addCancellableOperation:operation];
+}
+
+- (void)performFinishDownload{
+    
+    @try{[self.fileHandle closeFile];}@catch(NSException *exc){}
+    
+    __block smb_fd fileID = self.fileID;
+    __block smb_tid treeID = self.treeID;
+    
+    //Set the modification date to match the one on the SMB device so we can compare the two at a later date
+    [[NSFileManager defaultManager] setAttributes:@{NSFileModificationDate:self.file.modificationTime}
+                                     ofItemAtPath:self.tempFilePath
+                                            error:nil];
+    
+    if (self.isCancelled  || self.state != TOSMBSessionTransferTaskStateRunning) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
-        cleanup();
+        [self cleanUp];
         return;
     }
     
@@ -543,7 +534,7 @@
     self.state = TOSMBSessionTransferTaskStateCompleted;
     
     //Perform a final cleanup of all handles and references
-    cleanup();
+    [self cleanUp];
     
     //Alert the delegate that we finished, so they may perform any additional cleanup operations
     [self didSucceedWithFilePath:finalDestinationPath];

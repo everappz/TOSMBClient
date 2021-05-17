@@ -23,7 +23,7 @@
 #import <Foundation/Foundation.h>
 #import "TOSMBConstants.h"
 
-extern const NSTimeInterval kSessionTimeout;
+extern const NSTimeInterval kTOSMBSessionTimeout;
 
 @class TOSMBSessionDownloadTask;
 @class TOSMBSessionUploadTask;
@@ -32,19 +32,15 @@ extern const NSTimeInterval kSessionTimeout;
 
 @interface TOSMBSession : NSObject
 
-@property (nonatomic, copy) NSString *hostName;
-@property (nonatomic, copy) NSString *ipAddress;
-@property (nonatomic, copy) NSString *port;
+- (NSString *)hostName;
+- (NSString *)ipAddress;
+- (NSString *)port;
 
-@property (nonatomic, copy) NSString *userName;
-@property (nonatomic, copy) NSString *password;
-@property (nonatomic, copy) NSString *domain;
+- (NSString *)userName;
+- (NSString *)password;
+- (NSString *)domain;
 
-@property (nonatomic, readonly,getter=isConnected) BOOL connected;
-@property (nonatomic, assign) BOOL useInternalNameResolution;
-
-/* 1 == Guest, 0 == Logged in, -1 == Logged out */
-@property (nonatomic, readonly) NSInteger guest;
+- (BOOL)connected;
 
 /** 
  Creates a new SMB object, but doesn't try to connect until the first request is made.
@@ -52,16 +48,17 @@ extern const NSTimeInterval kSessionTimeout;
  If only one of these two values is supplied, this library will attempt to resolve the other via
  NetBIOS, but whereever possible, you should endeavour to supply both values on instantiation.
  
- @param name The host name of the network device
+ @param hostName The host name of the network device
  @param ipAddress The IP address of the network device
  @return A new instance of a session object
- 
  */
-- (instancetype)initWithHostName:(NSString *)name ipAddress:(NSString *)ipAddress port:(NSString *)port;
-
-- (instancetype)initWithHostNameOrIPAddress:(NSString *)hostNameOrIPaddress port:(NSString *)port;
-- (instancetype)initWithHostName:(NSString *)name port:(NSString *)port;
-- (instancetype)initWithIPAddress:(NSString *)ipAddress port:(NSString *)port;
+- (instancetype)initWithHostName:(NSString *)hostName
+                       ipAddress:(NSString *)ipAddress
+                            port:(NSString *)port
+                        userName:(NSString *)userName
+                        password:(NSString *)password
+                          domain:(NSString *)domain
+       useInternalNameResolution:(BOOL)useInternalNameResolution;
 
 /**
  Sets both the username and password for this login session. This should be set before any
@@ -70,7 +67,9 @@ extern const NSTimeInterval kSessionTimeout;
  @param userName The login user name
  @param password The login password
  */
-- (void)setLoginCredentialsWithUserName:(NSString *)userName password:(NSString *)password domain:(NSString *)domain;
+- (void)setLoginCredentialsWithUserName:(NSString *)userName
+                               password:(NSString *)password
+                                 domain:(NSString *)domain;
 
 /**
  Performs an asynchronous request for a list of files from the network device for the given file path.
@@ -79,7 +78,9 @@ extern const NSTimeInterval kSessionTimeout;
  @param errorHandler A pointer to an NSError object that will be non-nil if an error occurs.
  @return An NSArray of TOSMBFile objects describing the contents of the file path
  */
-- (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path success:(void (^)(NSArray *files))successHandler error:(void (^)(NSError *))errorHandler;
+- (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path
+                                   success:(void (^)(NSArray *files))successHandler
+                                     error:(void (^)(NSError *))errorHandler;
 
 /**
  Creates a download task object for asynchronously downloading a file to disk.
@@ -96,7 +97,9 @@ extern const NSTimeInterval kSessionTimeout;
  
  @return A download task object ready to be started, or nil upon failure.
  */
-- (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path destinationPath:(NSString *)destinationPath delegate:(id <TOSMBSessionDownloadTaskDelegate>)delegate;
+- (TOSMBSessionDownloadTask *)downloadTaskForFileAtPath:(NSString *)path
+                                        destinationPath:(NSString *)destinationPath
+                                               delegate:(id <TOSMBSessionDownloadTaskDelegate>)delegate;
 
 /**
  Same as above, creates a download task object for asynchronously downloading a file to disk.
@@ -114,8 +117,6 @@ extern const NSTimeInterval kSessionTimeout;
                                         progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
                                       completionHandler:(void (^)(NSString *filePath))completionHandler
                                             failHandler:(void (^)(NSError *error))failHandler;
-
-
 
 //Extra
 
@@ -139,13 +140,13 @@ extern const NSTimeInterval kSessionTimeout;
                             error:(void (^)(NSError *))errorHandler;
 
 - (TOSMBSessionUploadTask *)uploadTaskForFileAtPath:(NSString *)path
-                                        destinationPath:(NSString *)destinationPath
-                                        progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
-                                      completionHandler:(void (^)(NSString *filePath))completionHandler
-                                            failHandler:(void (^)(NSError *error))error;
+                                    destinationPath:(NSString *)destinationPath
+                                    progressHandler:(void (^)(uint64_t totalBytesWritten, uint64_t totalBytesExpected))progressHandler
+                                  completionHandler:(void (^)(NSString *filePath))completionHandler
+                                        failHandler:(void (^)(NSError *error))error;
 
 - (void)close;
 
-- (NSOperationQueue *)dataQueue;
+- (void)cancelAllRequests;
 
 @end

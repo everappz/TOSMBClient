@@ -12,15 +12,16 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface NSString (TOSMB)
 
- //Replace any backslashes \ with forward slashes /
-- (NSString *)stringByReplacingOccurrencesOfBackSlashWithForwardSlash;
+//Replace any backslashes \ with forward slashes /
+- (NSString *)TOSMB_stringByReplacingOccurrencesOfBackSlashWithForwardSlash;
 
-- (NSString *)shareNameFromPath;
+- (NSString *)TOSMB_shareNameFromPath;
 
-- (NSString *)filePathExcludingShareNameFromPath;
+- (NSString *)TOSMB_filePathExcludingShareNameFromPath;
 
-- (NSString *)relativeSMBPathFromPath;
+- (NSString *)TOSMB_relativeSMBPathFromPath;
 
++ (NSString *)TOSMB_uuidString;
 
 @end
 

@@ -21,11 +21,9 @@
 // -------------------------------------------------------------------------------
 
 #import <Foundation/Foundation.h>
-#import "TOSMBConstants.h"
+#import "TOSMBSessionTransferTask.h"
 
-@class TOSMBSession;
 @class TOSMBSessionDownloadTask;
-@class TOSMBCSessionWrapper;
 
 @protocol TOSMBSessionDownloadTaskDelegate <NSObject>
 
@@ -38,7 +36,7 @@
  
  @param downloadTask The download task object calling this delegate method.
  @param destinationPath The absolute file path to the file.
-*/
+ */
 - (void)downloadTask:(TOSMBSessionDownloadTask *)downloadTask didFinishDownloadingToPath:(NSString *)destinationPath;
 
 /**
@@ -51,7 +49,7 @@
  */
 - (void)downloadTask:(TOSMBSessionDownloadTask *)downloadTask
        didWriteBytes:(NSData *)bytesWritten
-   totalBytesReceived:(uint64_t)totalBytesReceived
+  totalBytesReceived:(uint64_t)totalBytesReceived
 totalBytesExpectedToReceive:(int64_t)totalBytesToReceive;
 
 /**
@@ -75,20 +73,9 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 
 @end
 
-@interface TOSMBSessionDownloadTask : NSObject
+@interface TOSMBSessionDownloadTask : TOSMBSessionTransferTask
 
 @property (nonatomic, weak) id<TOSMBSessionDownloadTaskDelegate> delegate;
-
-/** The parent session that is managing this download task. */
-@property (readonly, weak) TOSMBSession *sessionObject;
-
-@property (readonly, strong) TOSMBCSessionWrapper *dsm_session;
-
-/** The file path to the target file on the SMB network device. */
-@property (readonly,copy) NSString *sourceFilePath;
-
-/** The target file path that the file will be downloaded to. */
-@property (readonly,copy) NSString *destinationFilePath;
 
 /** The number of bytes presently downloaded by this task */
 @property (readonly) int64_t countOfBytesReceived;
@@ -96,31 +83,20 @@ totalBytesExpectedToReceive:(uint64_t)totalBytesToReceive;
 /** The total number of bytes we expect to download */
 @property (readonly) int64_t countOfBytesExpectedToReceive;
 
-/** Returns if download data from a suspended task exists */
-@property (readonly) BOOL canBeResumed;
+/** The total number of bytes seek before download */
+@property (nonatomic, assign)int64_t seekOffset;
 
-@property (nonatomic,assign)unsigned long long seekOffset;
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                       delegate:(id<TOSMBSessionDownloadTaskDelegate>)delegate;
 
-/** The state of the download task. */
-@property (readonly) TOSMBSessionTransferTaskState state;
-
-/**
- Resumes an existing download, or starts a new one otherwise.
- 
- Downloads are resumed if there is already data for this file on disk,
- and the modification date of that file matches the one on the network device.
- */
-- (void)resume;
-
-/**
- Suspends a download and halts network activity.
- */
-- (void)suspend;
-
-/**
- Cancels a download, and deletes all related transient data on disk.
- */
-- (void)cancel;
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                progressHandler:(TOSMBSessionTransferTaskProgressHandler)progressHandler
+                 successHandler:(TOSMBSessionTransferTaskSuccessHandler)successHandler
+                    failHandler:(TOSMBSessionTransferTaskFailHandler)failHandler;
 
 @end
 

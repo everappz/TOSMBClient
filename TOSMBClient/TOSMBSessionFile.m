@@ -107,6 +107,7 @@
     if ([normalizedPath characterAtIndex:normalizedPath.length - 1] != '/' && _directory) {
         normalizedPath = [normalizedPath stringByAppendingString:@"/"];
     }
+    NSParameterAssert(normalizedPath);
     _fullPath = [normalizedPath copy];
 }
 
@@ -140,7 +141,6 @@
     if (_writeTime){
         return _writeTime;
     }
-    
     _writeTime = [self dateFromLDAPTimeStamp:_writeTimestamp];
     return _writeTime;
 }

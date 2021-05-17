@@ -17,27 +17,42 @@
 
 @interface TOSMBSession ()
 
+@property (nonatomic, copy) NSString *hostName;
+@property (nonatomic, copy) NSString *ipAddress;
+@property (nonatomic, copy) NSString *port;
+@property (nonatomic, copy) NSString *userName;
+@property (nonatomic, copy) NSString *password;
+@property (nonatomic, copy) NSString *domain;
+
 /* The session pointer responsible for this object. */
 @property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
 @property (nonatomic, strong) NSDate *lastRequestDate;
 
-/* 1 == Guest, 0 == Logged in, -1 == Logged out */
-@property (nonatomic, assign, readwrite) NSInteger guest;
+@property (nonatomic, assign) BOOL useInternalNameResolution;
+@property (atomic, assign) BOOL needsReloadSession;
 
-@property (nonatomic, assign) BOOL needsReloadSession;
+/* Operation queue for asynchronous data requests */
+@property (nonatomic, strong) NSOperationQueue *requestsQueue;
 
-@property (nonatomic, strong) NSOperationQueue *dataQueue; /* Operation queue for asynchronous data requests */
-
-@property (nonatomic, strong) NSOperationQueue *callbackQueue; /* Operation queue for asynchronous callbacks */
+/* Operation queue for asynchronous callbacks */
+@property (nonatomic, strong) NSOperationQueue *callbackQueue;
 
 /* Connection/Authentication handling */
 - (NSError *)attemptConnection;
 
 /* File path parsing */
-- (NSString *)shareNameFromPath:(NSString *)path;
-- (NSString *)filePathExcludingShareNameFromPath:(NSString *)path;
-- (NSString *)relativeSMBPathFromPath:(NSString *)path;
++ (NSString *)shareNameFromPath:(NSString *)path;
++ (NSString *)filePathExcludingShareNameFromPath:(NSString *)path;
++ (NSString *)relativeSMBPathFromPath:(NSString *)path;
 
 - (void)performCallBackWithBlock:(void(^)(void))block;
+- (void)addRequestOperation:(NSOperation *)op;
+
+/* SMB Session */
+- (void)inSMBCSession:(void (^)(smb_session *session))block;
+
+- (smb_tid)cachedShareIDForName:(NSString *)shareName;
+- (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName;
+- (void)removeCachedShareIDForName:(NSString *)shareName;
 
 @end

@@ -49,10 +49,10 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 }
 
 - (void)close{
-    WEAK_SELF();
+    TOSMBMakeWeakReference();
     [self inSMBCSession:^(smb_session *session) {
-        STRONG_WEAK_SELF();
-        if(session!=NULL){
+        TOSMBMakeStrongFromWeakReference();
+        if(session != NULL){
             [strongSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
                 smb_tid shareID = [obj unsignedShortValue];
                 smb_tree_disconnect(session, shareID);
@@ -69,11 +69,14 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 - (void)inSMBCSession:(void (^)(smb_session *session))block {
     TOSMBCSessionWrapper *currentSyncQueue = (__bridge id)dispatch_get_specific(kTOSMBCSessionWrapperQueueSpecificKey);
     NSParameterAssert(currentSyncQueue != self);
-    WEAK_SELF();
+    if (currentSyncQueue == self) {
+        return;
+    }
+    TOSMBMakeWeakReference();
     dispatch_sync(_queue, ^() {
-        STRONG_WEAK_SELF();
+        TOSMBMakeStrongFromWeakReference();
         smb_session *smb_session = [strongSelf smb_session];
-        if(smb_session!=NULL && block){
+        if(smb_session != NULL && block){
             block(smb_session);
         }
     });
@@ -82,9 +85,9 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     __block smb_tid share_id = 0;
-    WEAK_SELF();
+    TOSMBMakeWeakReference();
     [self inSMBCSession:^(smb_session *session) {
-        STRONG_WEAK_SELF();
+        TOSMBMakeStrongFromWeakReference();
         share_id = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
     }];
     return share_id;
@@ -96,9 +99,9 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     __block BOOL removeShare = NO;
     __block smb_tid cachedShareID = 0;
     if(shareName.length>0 && shareID>0){
-        WEAK_SELF();
+        TOSMBMakeWeakReference();
         [self inSMBCSession:^(smb_session *session) {
-            STRONG_WEAK_SELF();
+            TOSMBMakeStrongFromWeakReference();
             cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
             if(shareID!=cachedShareID){
                 removeShare = cachedShareID>0;
@@ -116,9 +119,9 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     if(shareName.length>0){
         __block smb_tid cachedShareID = 0;
         __block BOOL removeShare = NO;
-        WEAK_SELF();
+        TOSMBMakeWeakReference();
         [self inSMBCSession:^(smb_session *session) {
-            STRONG_WEAK_SELF();
+            TOSMBMakeStrongFromWeakReference();
             cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
             removeShare = (cachedShareID>0);
             [strongSelf.shares removeObjectForKey:shareName];
@@ -138,12 +141,18 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 }
 
 - (BOOL)isValid{
-    BOOL b = ([self isConnected] && (NSDate.date.timeIntervalSince1970-self.lastRequestDate.timeIntervalSince1970)<kSessionTimeout && self.ipAddress.length>0 && self.userName.length>0);
-    return b;
+    const BOOL valid = [self isConnected] &&
+    (NSDate.date.timeIntervalSince1970 - self.lastRequestDate.timeIntervalSince1970) < kTOSMBSessionTimeout &&
+    self.ipAddress.length > 0 &&
+    self.userName.length > 0;
+    return valid;
 }
 
 - (NSString *)sessionKey{
-    return [[self class] sessionKeyForIPAddress:self.ipAddress domain:self.domain userName:self.userName password:self.password];
+    return [[self class] sessionKeyForIPAddress:self.ipAddress
+                                         domain:self.domain
+                                       userName:self.userName
+                                       password:self.password];
 }
 
 + (NSString *)sessionKeyForIPAddress:(NSString *)ipAddress

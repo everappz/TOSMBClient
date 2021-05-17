@@ -28,13 +28,13 @@ FOUNDATION_EXPORT double TOSMBClientVersionNumber;
 //! Project version string for TOSMBClient.
 FOUNDATION_EXPORT const unsigned char TOSMBClientVersionString[];
 
-
 #import <TOSMBClient/TOHost.h>
 #import <TOSMBClient/TONetBIOSNameService.h>
 #import <TOSMBClient/TONetBIOSNameServiceEntry.h>
 #import <TOSMBClient/TOSMBClient.h>
 #import <TOSMBClient/TOSMBConstants.h>
 #import <TOSMBClient/TOSMBSession.h>
-#import <TOSMBClient/TOSMBSessionDownloadTask.h>
 #import <TOSMBClient/TOSMBSessionFile.h>
+#import <TOSMBClient/TOSMBSessionTransferTask.h>
+#import <TOSMBClient/TOSMBSessionDownloadTask.h>
 #import <TOSMBClient/TOSMBSessionUploadTask.h>

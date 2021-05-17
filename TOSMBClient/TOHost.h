@@ -25,5 +25,4 @@
 
 + (BOOL)isValidIPAddress:(NSString *)addressString;
 
-
 @end

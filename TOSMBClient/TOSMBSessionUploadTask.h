@@ -7,27 +7,16 @@
 //
 
 #import <Foundation/Foundation.h>
-#import "TOSMBConstants.h"
+#import "TOSMBSessionTransferTask.h"
 
+@interface TOSMBSessionUploadTask : TOSMBSessionTransferTask
 
-@class TOSMBSession;
-@class TOSMBCSessionWrapper;
-
-@interface TOSMBSessionUploadTask : NSObject
-
-@property (readonly,weak) TOSMBSession *sessionObject;
-
-@property (readonly, strong) TOSMBCSessionWrapper *dsm_session;
-
-@property (readonly,copy) NSString *sourceFilePath;
-
-@property (readonly,copy) NSString *destinationFilePath;
-
-@property (readonly) TOSMBSessionTransferTaskState state;
-
-- (void)start;
-
-- (void)cancel;
+- (instancetype)initWithSession:(TOSMBSession *)session
+                       filePath:(NSString *)filePath
+                destinationPath:(NSString *)destinationPath
+                progressHandler:(TOSMBSessionTransferTaskProgressHandler)progressHandler
+                 successHandler:(TOSMBSessionTransferTaskSuccessHandler)successHandler
+                    failHandler:(TOSMBSessionTransferTaskFailHandler)failHandler;
 
 @end
 
