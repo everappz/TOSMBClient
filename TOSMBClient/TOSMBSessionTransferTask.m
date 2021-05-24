@@ -49,9 +49,19 @@ NSInteger kTOSMBSessionTransferTaskCallbackDataBufferSize = 262144; // 8 * kTOSM
 }
 
 - (void)addCancellableOperation:(NSOperation *)operation{
-    if (operation) {
+    NSParameterAssert([operation isKindOfClass:[NSOperation class]]);
+    if ([operation isKindOfClass:[NSOperation class]]) {
         @synchronized (self.operations) {
             [self.operations addObject:operation];
+        }
+    }
+}
+
+- (void)removeCancellableOperation:(NSOperation *)operation{
+    NSParameterAssert([operation isKindOfClass:[NSOperation class]]);
+    if ([operation isKindOfClass:[NSOperation class]]) {
+        @synchronized (self.operations) {
+            [self.operations removeObject:operation];
         }
     }
 }

@@ -250,6 +250,12 @@
         [strongSelf performStartDownload];
     };
     [operation addExecutionBlock:executionBlock];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
     [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
@@ -264,7 +270,6 @@
 }
 
 - (void)performStartDownload{
-    
     if (self.isCancelled || self.session==nil) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeCancelled)];
         return;
@@ -406,7 +411,6 @@
     //Perform the file download
     self.callbackData = [[NSMutableData alloc] init];
     [self downloadNextChunk];
-    
 }
 
 - (void)downloadNextChunk {
@@ -426,6 +430,12 @@
         }
     };
     [operation addExecutionBlock:executionBlock];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
     [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
@@ -438,6 +448,7 @@
         TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
+        NSParameterAssert([NSThread isMainThread]);
         [strongSelf performSelector:@selector(downloadNextChunk) withObject:nil afterDelay:0.1];
     };
     [operation addExecutionBlock:executionBlock];
@@ -502,17 +513,19 @@
         [strongSelf performFinishDownload];
     };
     [operation addExecutionBlock:executionBlock];
-    [self.session.requestsQueue addOperation:operation];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
+    [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
 
 - (void)performFinishDownload{
-    
     @try{[self.fileHandle closeFile];}@catch(NSException *exc){}
-    
-    __block smb_fd fileID = self.fileID;
-    __block smb_tid treeID = self.treeID;
-    
+
     //Set the modification date to match the one on the SMB device so we can compare the two at a later date
     [[NSFileManager defaultManager] setAttributes:@{NSFileModificationDate:self.file.modificationTime}
                                      ofItemAtPath:self.tempFilePath

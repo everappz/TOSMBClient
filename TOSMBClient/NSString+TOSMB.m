@@ -29,7 +29,9 @@
     if (range.location != NSNotFound){
         shareName = [shareName substringWithRange:NSMakeRange(0, range.location)];
     }
-    NSParameterAssert(shareName);
+    if (shareName.length == 0){
+        shareName = nil;
+    }
     return shareName;
 }
 

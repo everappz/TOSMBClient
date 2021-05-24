@@ -42,4 +42,6 @@
 
 - (void)addCancellableOperation:(NSOperation *)operation;
 
+- (void)removeCancellableOperation:(NSOperation *)operation;
+
 @end

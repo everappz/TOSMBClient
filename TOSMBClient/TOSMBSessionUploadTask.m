@@ -141,6 +141,12 @@
         [strongSelf performStartUpload];
     };
     [operation addExecutionBlock:executionBlock];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
     [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
@@ -244,11 +250,11 @@
     //Open the file handle
     __block smb_fd fileID = 0;
     [self.session inSMBCSession:^(smb_session *session) {
-        smb_fopen(session, treeID, relativeUploadPathCString, SMB_MOD_RW,&fileID);
+        smb_fopen(session, treeID, relativeUploadPathCString, SMB_MOD_RW, &fileID);
     }];
     self.fileID = fileID;
     
-    if (fileID==0) {
+    if (fileID == 0) {
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeFailToUpload)];
         [self cleanUp];
         return;
@@ -290,6 +296,12 @@
         }
     };
     [operation addExecutionBlock:executionBlock];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
     [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
@@ -302,6 +314,7 @@
         TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
+        NSParameterAssert([NSThread isMainThread]);
         [strongSelf performSelector:@selector(uploadNextChunk) withObject:nil afterDelay:0.1];
     };
     [operation addExecutionBlock:executionBlock];
@@ -329,21 +342,21 @@
     if (bytesToWrite > 0) {
         void *bytes = (void *)data.bytes;
         while (bytesToWrite > 0) {
-            __block ssize_t r = -1;
+            __block ssize_t write_size = -1;
             [self.session inSMBCSession:^(smb_session *session) {
-                r = smb_fwrite(session, self.fileID, bytes, bytesToWrite);
+                write_size = smb_fwrite(session, self.fileID, bytes, bytesToWrite);
             }];
             
-            if (r == 0){
+            if (write_size == 0){
                 break;
             }
             
-            if (r < 0) {
+            if (write_size < 0) {
                 uploadError = YES;
                 break;
             }
-            bytesToWrite -= r;
-            bytes += r;
+            bytesToWrite -= write_size;
+            bytes += write_size;
         }
     }
     
@@ -379,7 +392,13 @@
         [strongSelf performFinishUpload];
     };
     [operation addExecutionBlock:executionBlock];
-    [self.session.requestsQueue addOperation:operation];
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
+    [self.session addRequestOperation:operation];
     [self addCancellableOperation:operation];
 }
 
