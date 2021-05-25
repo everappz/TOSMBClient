@@ -15,14 +15,13 @@
     return [self stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
 }
 
-- (NSString *)TOSMB_shareNameFromPath{
-    NSString *path = self;
-    NSString *shareName = [path copy];
+- (nullable NSString *)TOSMB_shareNameFromPath{
+    NSString *shareName = [self copy];
     //Remove any potential slashes at the start
-    if ([[shareName substringToIndex:2] isEqualToString:@"//"]) {
+    if ([shareName hasPrefix:@"//"] || [shareName hasPrefix:@"\\\\"]) {
         shareName = [shareName substringFromIndex:2];
     }
-    else if ([[shareName substringToIndex:1] isEqualToString:@"/"]) {
+    else if ([shareName hasPrefix:@"/"] || [shareName hasPrefix:@"\\"]) {
         shareName = [shareName substringFromIndex:1];
     }
     NSRange range = [shareName rangeOfString:@"/"];
@@ -36,32 +35,24 @@
 }
 
 - (NSString *)TOSMB_filePathExcludingShareNameFromPath{
-    NSString *path = self;
-    NSString *resultPath = [path copy];
+    NSString *resultPath = [self copy];
     //Remove any potential slashes at the start
-    if ([[resultPath substringToIndex:2] isEqualToString:@"//"] || [[resultPath substringToIndex:2] isEqualToString:@"\\\\"]) {
+    if ([resultPath hasPrefix:@"//"] || [resultPath hasPrefix:@"\\\\"]) {
         resultPath = [resultPath substringFromIndex:2];
     }
-    if ([[resultPath substringToIndex:1] isEqualToString:@"/"] || [[resultPath substringToIndex:1] isEqualToString:@"\\"]) {
+    else if ([resultPath hasPrefix:@"/"] || [resultPath hasPrefix:@"\\"]) {
         resultPath = [resultPath substringFromIndex:1];
     }
-    
     NSRange range = [resultPath rangeOfString:@"/"];
     if (range.location == NSNotFound) {
         range = [resultPath rangeOfString:@"\\"];
     }
-    
     if (range.location != NSNotFound){
         resultPath = [resultPath substringFromIndex:range.location+1];
     }
-    
     if ([resultPath length] > 1 && [resultPath hasSuffix:@"/"]) {
-        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
+        return [resultPath substringToIndex:[resultPath length] - 1];
     }
-    if ([resultPath length] > 1 && [resultPath hasSuffix:@"\\"]) {
-        resultPath = [resultPath substringToIndex:[resultPath length] - 1];
-    }
-    NSParameterAssert(resultPath);
     return resultPath;
 }
 
