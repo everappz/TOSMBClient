@@ -15,7 +15,7 @@
     return [self stringByReplacingOccurrencesOfString:@"\\" withString:@"/"];
 }
 
-- (nullable NSString *)TOSMB_shareNameFromPath{
+- (NSString *)TOSMB_shareNameFromPath{
     NSString *shareName = [self copy];
     //Remove any potential slashes at the start
     if ([shareName hasPrefix:@"//"] || [shareName hasPrefix:@"\\\\"]) {
@@ -27,9 +27,6 @@
     NSRange range = [shareName rangeOfString:@"/"];
     if (range.location != NSNotFound){
         shareName = [shareName substringWithRange:NSMakeRange(0, range.location)];
-    }
-    if (shareName.length == 0){
-        shareName = nil;
     }
     return shareName;
 }
@@ -57,7 +54,7 @@
 }
 
 - (NSString *)TOSMB_relativeSMBPathFromPath{
-    NSString *path = self;
+    NSString *path = [self copy];
     //work out the remainder of the file path and create the search query
     NSString *relativePath = [path TOSMB_filePathExcludingShareNameFromPath];
     //prepend double backslashes

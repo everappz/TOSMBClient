@@ -15,7 +15,7 @@ NS_ASSUME_NONNULL_BEGIN
 //Replace any backslashes \ with forward slashes /
 - (NSString *)TOSMB_stringByReplacingOccurrencesOfBackSlashWithForwardSlash;
 
-- (nullable NSString *)TOSMB_shareNameFromPath;
+- (NSString *)TOSMB_shareNameFromPath;
 
 - (NSString *)TOSMB_filePathExcludingShareNameFromPath;
 

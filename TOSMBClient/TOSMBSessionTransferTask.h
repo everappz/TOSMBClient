@@ -19,6 +19,7 @@ typedef void(^TOSMBSessionTransferTaskFailHandler)(NSError *error);
 
 extern NSInteger kTOSMBSessionTransferTaskBufferSize;
 extern NSInteger kTOSMBSessionTransferTaskCallbackDataBufferSize;
+extern NSTimeInterval kTOSMBSessionTransferAsyncDelay;
 
 @interface TOSMBSessionTransferTask : NSObject
 

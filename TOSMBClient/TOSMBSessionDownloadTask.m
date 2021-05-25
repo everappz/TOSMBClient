@@ -449,7 +449,9 @@
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
         NSParameterAssert([NSThread isMainThread]);
-        [strongSelf performSelector:@selector(downloadNextChunk) withObject:nil afterDelay:0.1];
+        [strongSelf performSelector:@selector(downloadNextChunk)
+                         withObject:nil
+                         afterDelay:kTOSMBSessionTransferAsyncDelay];
     };
     [operation addExecutionBlock:executionBlock];
     [[NSOperationQueue mainQueue] addOperation:operation];

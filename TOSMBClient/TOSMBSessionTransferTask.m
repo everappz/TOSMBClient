@@ -11,6 +11,8 @@
 
 NSInteger kTOSMBSessionTransferTaskBufferSize = 32768;
 NSInteger kTOSMBSessionTransferTaskCallbackDataBufferSize = 262144; // 8 * kTOSMBSessionTransferTaskBufferSize
+NSTimeInterval kTOSMBSessionTransferAsyncDelay = 0.05;
+
 
 @implementation TOSMBSessionTransferTask
 
