@@ -1209,7 +1209,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 - (void)removeCachedShareIDForName:(NSString *)shareName{
     @synchronized (self) {
-        [self removeCachedShareIDForName:shareName];
+        [self.dsm_session removeCachedShareIDForName:shareName];
     }
 }
 
