@@ -47,6 +47,10 @@
     return self;
 }
 
+- (void)dealloc {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
+}
+
 #pragma mark - Feedback Methods -
 
 - (void)didSucceedWithFilePath:(NSString *)filePath{

@@ -79,6 +79,10 @@
     return self;
 }
 
+- (void)dealloc {
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
+}
+
 #pragma mark - Temporary Destination Methods -
 
 - (NSString *)filePathForTemporaryDestination{
@@ -125,6 +129,7 @@
 
 - (void)cancel{
     [super cancel];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
     @try{[[NSFileManager defaultManager] removeItemAtPath:self.tempFilePath error:nil];}@catch(NSException *exc){}
 }
 

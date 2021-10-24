@@ -41,6 +41,7 @@ extern const NSTimeInterval kTOSMBSessionTimeout;
 - (NSString *)domain;
 
 - (BOOL)connected;
+- (NSError *)attemptConnection;
 
 /** 
  Creates a new SMB object, but doesn't try to connect until the first request is made.
