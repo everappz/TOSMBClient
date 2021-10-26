@@ -509,16 +509,15 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 - (TOSMBSessionFile *)itemAttributesAtPath:(NSString *)path
                                      error:(NSError **)error
 {
-    
     TOSMBSessionFile *file = nil;
     
     //Attempt a connection attempt (If it has not already been done)
     NSError *resultError = [self attemptConnection];
-    if (error && resultError){
+    if (error && resultError) {
         *error = resultError;
     }
     
-    if (self.connected==NO){
+    if (self.connected == NO) {
         return nil;
     }
     
@@ -539,31 +538,35 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if(shareID==0){
+    if (shareID == 0) {
+        if (error) {
+            resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
+            *error = resultError;
+        }
         return nil;
     }
     
     //work out the remainder of the file path and create the search query
     NSString *relativePath = [TOSMBSession relativeSMBPathFromPath:path];
     
+    if ([[path stringByDeletingLastPathComponent] isEqualToString:@"/"]) {
+        file = [[TOSMBSessionFile alloc] initWithShareName:shareName];
+        return file;
+    }
+    
     __block smb_stat stat = NULL;
     [self inSMBCSession:^(smb_session *session) {
         stat = smb_fstat(session, shareID, relativePath.UTF8String);
     }];
     
-    if(stat==NULL){
+    if (stat == NULL) {
         if (error) {
             resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
             *error = resultError;
         }
     }
-    else{
-        if([[path stringByDeletingLastPathComponent] isEqualToString:@"/"]){
-            file = [[TOSMBSessionFile alloc] initWithShareName:shareName];
-        }
-        else{
-            file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
-        }
+    else {
+        file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
         [self inSMBCSession:^(smb_session *session) {
             smb_stat_destroy(stat);
         }];
