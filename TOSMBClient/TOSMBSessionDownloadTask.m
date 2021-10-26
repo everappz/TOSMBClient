@@ -234,18 +234,26 @@
                                                  inTree:(smb_tid)treeID
 {
     const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    __block smb_stat fileStat = NULL;
+    __block smb_stat statBasic = NULL;
+    __block smb_stat statStandard = NULL;
     [self.session inSMBCSession:^(smb_session *session) {
-        fileStat = smb_fstat(session, treeID, fileCString);
+        statBasic = smb_fstat_basic(session, treeID, fileCString);
+        statStandard = smb_fstat_standard(session, treeID, fileCString);
     }];
-    if (fileStat == NULL) {
+    
+    if (statBasic == NULL || statStandard == NULL) {
         return nil;
     }
-    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:fileStat
-                                            parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]];
+    
+    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithBasicFileInfoStat:statBasic
+                                                            standardFileInfoStat:statStandard
+                                                                        fullPath:filePath];
+    
     [self.session inSMBCSession:^(smb_session *session) {
-        smb_stat_destroy(fileStat);
+        smb_stat_destroy(statBasic);
+        smb_stat_destroy(statStandard);
     }];
+    
     return file;
 }
 

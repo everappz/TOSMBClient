@@ -37,14 +37,16 @@
  */
 - (instancetype)initWithStat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path;
 
+- (instancetype)initWithBasicFileInfoStat:(smb_stat)basicFileInfoStat
+                     standardFileInfoStat:(smb_stat)standardFileInfoStat
+                                 fullPath:(NSString *)fullPath;
+
 /**
  * Init a new instance representing the share itself, which in the case of libSMD, is simply another directory
  *
  * @param name The name of the share
  */
 - (instancetype)initWithShareName:(NSString *)name;
-
-- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath;
 
 + (instancetype)rootDirectory;
 

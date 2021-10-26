@@ -553,22 +553,29 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         file = [[TOSMBSessionFile alloc] initWithShareName:shareName];
         return file;
     }
+
+    const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
     
-    __block smb_stat stat = NULL;
+    __block smb_stat statBasic = NULL;
+    __block smb_stat statStandard = NULL;
     [self inSMBCSession:^(smb_session *session) {
-        stat = smb_fstat(session, shareID, relativePath.UTF8String);
+        statBasic = smb_fstat_basic(session, shareID, relativePathCString);
+        statStandard = smb_fstat_standard(session, shareID, relativePathCString);
     }];
     
-    if (stat == NULL) {
+    if (statBasic == NULL || statStandard == NULL) {
         if (error) {
             resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
             *error = resultError;
         }
     }
     else {
-        file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
+        file = [[TOSMBSessionFile alloc] initWithBasicFileInfoStat:statBasic
+                                              standardFileInfoStat:statStandard
+                                                          fullPath:path];
         [self inSMBCSession:^(smb_session *session) {
-            smb_stat_destroy(stat);
+            smb_stat_destroy(statBasic);
+            smb_stat_destroy(statStandard);
         }];
     }
     
@@ -981,7 +988,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     
     __block smb_stat stat = NULL;
     [self inSMBCSession:^(smb_session *session) {
-        stat = smb_fstat(session, shareID, relativePathCString);
+        stat = smb_fstat_basic(session, shareID, relativePathCString);
     }];
     
     if (stat == NULL) {
@@ -1034,7 +1041,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
             //double check
             __block smb_stat stat = NULL;
             [self inSMBCSession:^(smb_session *session) {
-                stat = smb_fstat(session, shareID, relativePathCString);
+                stat = smb_fstat_basic(session, shareID, relativePathCString);
             }];
             
             if(stat==NULL){

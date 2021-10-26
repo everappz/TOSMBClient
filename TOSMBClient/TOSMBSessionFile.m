@@ -34,13 +34,21 @@
     return self;
 }
 
-- (instancetype)initWithStat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path{
+- (instancetype)initWithStat:(smb_stat)stat
+     parentDirectoryFilePath:(NSString *)parentDirectoryFilePath
+{
     if (stat == NULL){
         return nil;
     }
     if (self = [self init]) {
         const char *name = smb_stat_name(stat);
-        _name = [[[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding] copy];
+        if (name != NULL) {
+            _name = [[[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding] copy];
+            _fullPath = [[parentDirectoryFilePath stringByAppendingPathComponent:_name] copy];
+        }
+        else{
+            @try{NSParameterAssert(NO);}@catch(NSException *exc){}
+        }
         _fileSize = smb_stat_get(stat, SMB_STAT_SIZE);
         _allocationSize = smb_stat_get(stat, SMB_STAT_ALLOC_SIZE);
         _directory = (smb_stat_get(stat, SMB_STAT_ISDIR) != 0);
@@ -50,20 +58,45 @@
         _writeTimestamp = smb_stat_get(stat, SMB_STAT_WTIME);
         _modificationTime = [self dateFromLDAPTimeStamp:_modificationTimestamp];
         _creationTime = [self dateFromLDAPTimeStamp:_creationTimestamp];
-        _fullPath = [[path stringByAppendingPathComponent:_name] copy];
         [self normalizeFullPath];
     }
     
     return self;
 }
 
-- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath {
-    if (stat == NULL){
+- (instancetype)initWithBasicFileInfoStat:(smb_stat)basicFileInfoStat
+                     standardFileInfoStat:(smb_stat)standardFileInfoStat
+                                 fullPath:(NSString *)fullPath
+{
+    if (basicFileInfoStat == NULL){
+        NSParameterAssert(NO);
         return nil;
     }
-    if (self = [self initWithStat:stat parentDirectoryFilePath:[fullPath stringByDeletingLastPathComponent]]) {
+    if (standardFileInfoStat == NULL){
+        NSParameterAssert(NO);
+        return nil;
+    }
+    if (fullPath == nil){
+        NSParameterAssert(NO);
+        return nil;
+    }
+    
+    if (self = [self init])
+    {
         _name = [[fullPath lastPathComponent] copy];
         _fullPath = [fullPath copy];
+        
+        _directory = (smb_stat_get(basicFileInfoStat, SMB_STAT_ISDIR) != 0);
+        _modificationTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_MTIME);
+        _creationTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_CTIME);
+        _accessTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_ATIME);
+        _writeTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_WTIME);
+        _modificationTime = [self dateFromLDAPTimeStamp:_modificationTimestamp];
+        _creationTime = [self dateFromLDAPTimeStamp:_creationTimestamp];
+        
+        _fileSize = smb_stat_get(standardFileInfoStat, SMB_STAT_SIZE);
+        _allocationSize = smb_stat_get(standardFileInfoStat, SMB_STAT_ALLOC_SIZE);
+        
         [self normalizeFullPath];
     }
     return self;
