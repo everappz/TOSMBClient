@@ -17,7 +17,7 @@ NSTimeInterval kTOSMBSessionTransferAsyncDelay = 0.05;
 @implementation TOSMBSessionTransferTask
 
 - (void)dealloc{
-    [self cancelAllOperations];
+    [NSObject cancelPreviousPerformRequestsWithTarget:self];
 }
 
 #pragma mark - Public Control Methods -

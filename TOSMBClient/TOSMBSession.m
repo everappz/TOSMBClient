@@ -64,7 +64,8 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         self.callbackQueue.maxConcurrentOperationCount = 1;
         self.requestsQueue = [[NSOperationQueue alloc] init];
         self.requestsQueue.maxConcurrentOperationCount = 10;
-        self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
+        self.smbSessionWrapper = [[TOSMBCSessionWrapper alloc] init];
+        self.smbSessionLock = [NSRecursiveLock new];
         self.useInternalNameResolution = useInternalNameResolution;
         self.ipAddress = ipAddress;
         self.hostName = hostName;
@@ -83,10 +84,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 - (void)close{
     [self cancelAllRequests];
     [self cancelAllCallbacks];
-    @synchronized (self) {
-        [self.dsm_session close];
-        self.dsm_session = nil;
-    }
+    [self closeSMBSession];
 }
 
 #pragma mark - Authorization -
@@ -94,35 +92,12 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 - (void)setLoginCredentialsWithUserName:(NSString *)userName
                                password:(NSString *)password
                                  domain:(NSString *)domain{
-    @synchronized (self) {
-        self.userName = userName;
-        self.password = password;
-        self.domain = domain;
-    }
+    self.userName = userName;
+    self.password = password;
+    self.domain = domain;
 }
 
 #pragma mark - Connections/Authentication -
-
-- (void)setLastRequestDate:(NSDate *)lastRequestDate{
-    @synchronized (self) {
-        [self.dsm_session setLastRequestDate:lastRequestDate];
-    }
-}
-
-- (NSDate *)lastRequestDate{
-    NSDate *date = nil;
-    @synchronized (self) {
-        date = self.dsm_session.lastRequestDate;
-    }
-    return date;
-}
-
-- (void)reloadSession{
-    @synchronized (self) {
-        [self.dsm_session close];
-        self.dsm_session = [[TOSMBCSessionWrapper alloc] init];
-    }
-}
 
 - (NSError *)attemptConnectionToAddress:(NSString *)ipaddr
                                    port:(NSString *)port
@@ -169,20 +144,18 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     const char *password = (self.password.length>0 ? [self.password cStringUsingEncoding:NSUTF8StringEncoding] : "");
     const char *domain = (self.domain.length>0 ? [self.domain cStringUsingEncoding:NSUTF8StringEncoding] : [@"?" cStringUsingEncoding:NSUTF8StringEncoding]);
     
-    NSString *dsm_session_domain = [NSString stringWithUTF8String:domain];
-    NSString *dsm_session_userName = [NSString stringWithUTF8String:userName];
-    NSString *dsm_session_password = [NSString stringWithUTF8String:password];
-    NSString *dsm_session_ip_address = self.ipAddress;
+    NSString *session_domain = [NSString stringWithUTF8String:domain];
+    NSString *session_userName = [NSString stringWithUTF8String:userName];
+    NSString *session_password = [NSString stringWithUTF8String:password];
+    NSString *session_ip_address = self.ipAddress;
     
-    @synchronized (self) {
-        self.dsm_session.ipAddress = dsm_session_ip_address;
-        self.dsm_session.domain = dsm_session_domain;
-        self.dsm_session.userName = dsm_session_userName;
-        self.dsm_session.password = dsm_session_password;
-    }
+    [self updateSMBSessionUserName:session_userName
+                          password:session_password
+                         ipAddress:session_ip_address
+                            domain:session_domain];
     
     //Attempt a connection
-    __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeNone;
+    __block TOSMBSessionErrorCode errorCode = TOSMBSessionErrorCodeUnableToConnect;
     __block int guest = -1;
     
     [self inSMBCSession:^(smb_session *session) {
@@ -200,6 +173,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
         
         guest = smb_session_is_guest(session);
+        errorCode = TOSMBSessionErrorCodeNone;
     }];
     
     if (errorCode != TOSMBSessionErrorCodeNone) {
@@ -213,18 +187,18 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 - (NSError *)attemptConnection{
     
-    __block BOOL sessionValid = YES;
+    __block BOOL sessionValid = NO;
     [self inSMBCSession:^(smb_session *session) {
-        if (session == NULL) {
-            sessionValid = NO;
+        if (session != NULL) {
+            sessionValid = YES;
         }
     }];
     
-    if ( ( self.lastRequestDate && [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kTOSMBSessionTimeout ) ||
-        self.needsReloadSession ||
-        sessionValid == NO ) {
+    const BOOL lastRequetTimeout = self.lastRequestDate &&
+    [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kTOSMBSessionTimeout;
+    
+    if (lastRequetTimeout || sessionValid == NO) {
         [self reloadSession];
-        self.needsReloadSession = NO;
         self.connected = NO;
     }
     self.lastRequestDate = [NSDate date];
@@ -433,7 +407,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     
     NSArray *result = [fileList sortedArrayUsingDescriptors:@[[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]]];
     return result;
-    
 }
 
 - (NSOperation *)contentsOfDirectoryAtPath:(NSString *)path
@@ -456,7 +429,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         NSArray *files = [strongSelf contentsOfDirectoryAtPath:path error:&error];
         
         if (error) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -468,10 +440,8 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
         
     };
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    return operation;
     
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 #pragma mark - Download Tasks -
@@ -507,8 +477,8 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 - (NSOperation *)openConnection:(void (^)(void))successHandler
                           error:(void (^)(NSError *))errorHandler
 {
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+    
     TOSMBMakeWeakReference();
     TOSMBMakeWeakReferenceForOperation();
     
@@ -521,7 +491,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         NSError *error = [strongSelf attemptConnection];
         
         if (error) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -532,10 +501,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
             }
         }
     };
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    return operation;
-    
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 #pragma mark - Item Info -
@@ -604,14 +570,12 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     }
     
     return file;
-    
 }
 
 - (NSOperation *)itemAttributesAtPath:(NSString *)path
                               success:(void (^)(TOSMBSessionFile *))successHandler
                                 error:(void (^)(NSError *))errorHandler
 {
-    
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     TOSMBMakeWeakReference();
     TOSMBMakeWeakReferenceForOperation();
@@ -626,7 +590,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         TOSMBSessionFile *file = [strongSelf itemAttributesAtPath:path error:&error];
         
         if (error) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -638,9 +601,8 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
         
     };
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    return operation;
+    
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 #pragma mark - Move Item -
@@ -700,16 +662,14 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     }
     
     return (result==DSM_SUCCESS);
-    
 }
 
 - (NSOperation *)moveItemAtPath:(NSString *)fromPath
                          toPath:(NSString *)toPath
                         success:(void (^)(TOSMBSessionFile *newFile))successHandler
-                          error:(void (^)(NSError *))errorHandler{
-    
+                          error:(void (^)(NSError *))errorHandler
+{
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    
     TOSMBMakeWeakReference();
     TOSMBMakeWeakReferenceForOperation();
     
@@ -723,7 +683,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         BOOL success = [strongSelf moveItemAtPath:fromPath toPath:toPath error:&error];
         
         if (success==NO || error) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -736,10 +695,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
         
     };
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    return operation;
-    
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 #pragma mark - Create Directory -
@@ -797,10 +753,9 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 - (NSOperation *)createDirectoryAtPath:(NSString *)path
                                success:(void (^)(TOSMBSessionFile *createdDirectory))successHandler
-                                 error:(void (^)(NSError *))errorHandler{
-    
+                                 error:(void (^)(NSError *))errorHandler
+{
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    
     TOSMBMakeWeakReference();
     TOSMBMakeWeakReferenceForOperation();
     
@@ -814,7 +769,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         BOOL success = [strongSelf createDirectoryAtPath:path error:&error];
         
         if (success==NO || error) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -827,10 +781,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
     };
     
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    
-    return operation;
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 
@@ -1106,10 +1057,10 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 - (NSOperation *)deleteItemAtPath:(NSString *)path
                           success:(void (^)(void))successHandler
-                            error:(void (^)(NSError *))errorHandler{
+                            error:(void (^)(NSError *))errorHandler
+{
     
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    
     TOSMBMakeWeakReference();
     TOSMBMakeWeakReferenceForOperation();
     
@@ -1122,7 +1073,6 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         BOOL success = [strongSelf deleteItemAtPath:path error:&error];
         
         if (success==NO) {
-            strongSelf.needsReloadSession = YES;
             if (errorHandler) {
                 [strongSelf performCallBackWithBlock:^{ if(errorHandler){errorHandler(error);} }];
             }
@@ -1134,10 +1084,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
         }
     };
     
-    [operation addExecutionBlock:operationBlock];
-    [self addRequestOperation:operation];
-    
-    return operation;
+    return [self addRequestOperation:operation withBlock:operationBlock];
 }
 
 #pragma mark - Upload Task -
@@ -1162,7 +1109,13 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     NSParameterAssert(self.callbackQueue);
     NSParameterAssert(block);
     if(block){
-        NSBlockOperation *op = [NSBlockOperation blockOperationWithBlock:block];
+        NSBlockOperation *op = [NSBlockOperation blockOperationWithBlock:^{
+            @try {
+                if (block){
+                    block();
+                }
+            } @catch (NSException *exception) {}
+        }];
         [self.callbackQueue addOperation:op];
     }
 }
@@ -1171,11 +1124,29 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     [self.callbackQueue cancelAllOperations];
 }
 
-- (void)addRequestOperation:(NSOperation *)op{
-    NSParameterAssert(op);
-    if (op) {
-        [self.requestsQueue addOperation:op];
+- (NSBlockOperation *)addRequestOperation:(NSBlockOperation *)operation
+                                withBlock:(void(^)(void))operationBlock
+{
+    NSParameterAssert(operationBlock);
+    if (operationBlock == nil) {
+        return nil;
     }
+    
+    NSParameterAssert(operation);
+    if (operation == nil) {
+        return nil;
+    }
+    
+    id operationBlockWrapped = ^{
+        @try {
+            if (operationBlock){
+                operationBlock();
+            }
+        } @catch (NSException *exception) {}
+    };
+    [operation addExecutionBlock:operationBlockWrapped];
+    [self.requestsQueue addOperation:operation];
+    return operation;
 }
 
 - (void)cancelAllRequests{
@@ -1184,33 +1155,74 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 #pragma mark - SMB Session -
 
+- (void)setLastRequestDate:(NSDate *)lastRequestDate{
+    [self.smbSessionLock lock];
+    [self.smbSessionWrapper setLastRequestDate:lastRequestDate];
+    [self.smbSessionLock unlock];
+}
+
+- (NSDate *)lastRequestDate{
+    NSDate *date = nil;
+    [self.smbSessionLock lock];
+    date = self.smbSessionWrapper.lastRequestDate;
+    [self.smbSessionLock unlock];
+    return date;
+}
+
+- (void)reloadSession{
+    [self.smbSessionLock lock];
+    [self.smbSessionWrapper close];
+    self.smbSessionWrapper = [[TOSMBCSessionWrapper alloc] init];
+    [self.smbSessionLock unlock];
+}
+
 - (void)inSMBCSession:(void (^)(smb_session *session))block {
-    TOSMBCSessionWrapper *dsm_session = nil;
-    @synchronized (self) {
-        dsm_session = self.dsm_session;
-    }
-    [dsm_session inSMBCSession:block];
+    TOSMBCSessionWrapper *smbSessionWrapper = nil;
+    [self.smbSessionLock lock];
+    smbSessionWrapper = self.smbSessionWrapper;
+    [self.smbSessionLock unlock];
+    [smbSessionWrapper inSMBCSession:block];
 }
 
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
     __block smb_tid share_id = 0;
-    @synchronized (self) {
-        share_id = [self.dsm_session cachedShareIDForName:shareName];
-    }
+    [self.smbSessionLock lock];
+    share_id = [self.smbSessionWrapper cachedShareIDForName:shareName];
+    [self.smbSessionLock unlock];
     return share_id;
 }
 
 - (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName{
-    @synchronized (self) {
-        [self.dsm_session cacheShareID:shareID forName:shareName];
-    }
+    [self.smbSessionLock lock];
+    [self.smbSessionWrapper cacheShareID:shareID forName:shareName];
+    [self.smbSessionLock unlock];
 }
 
 - (void)removeCachedShareIDForName:(NSString *)shareName{
-    @synchronized (self) {
-        [self.dsm_session removeCachedShareIDForName:shareName];
-    }
+    [self.smbSessionLock lock];
+    [self.smbSessionWrapper removeCachedShareIDForName:shareName];
+    [self.smbSessionLock unlock];
+}
+
+- (void)closeSMBSession {
+    [self.smbSessionLock lock];
+    [self.smbSessionWrapper close];
+    self.smbSessionWrapper = nil;
+    [self.smbSessionLock unlock];
+}
+
+- (void)updateSMBSessionUserName:(NSString *)userName
+                        password:(NSString *)password
+                       ipAddress:(NSString *)ipAddress
+                          domain:(NSString *)domain
+{
+    [self.smbSessionLock lock];
+    self.smbSessionWrapper.ipAddress = ipAddress;
+    self.smbSessionWrapper.domain = domain;
+    self.smbSessionWrapper.userName = userName;
+    self.smbSessionWrapper.password = password;
+    [self.smbSessionLock unlock];
 }
 
 #pragma mark - String Parsing -

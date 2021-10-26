@@ -17,19 +17,19 @@
 
 @interface TOSMBSession ()
 
-@property (nonatomic, copy) NSString *hostName;
-@property (nonatomic, copy) NSString *ipAddress;
-@property (nonatomic, copy) NSString *port;
-@property (nonatomic, copy) NSString *userName;
-@property (nonatomic, copy) NSString *password;
-@property (nonatomic, copy) NSString *domain;
+@property (atomic, copy) NSString *hostName;
+@property (atomic, copy) NSString *ipAddress;
+@property (atomic, copy) NSString *port;
+@property (atomic, copy) NSString *userName;
+@property (atomic, copy) NSString *password;
+@property (atomic, copy) NSString *domain;
 
 /* The session pointer responsible for this object. */
-@property (nonatomic, strong) TOSMBCSessionWrapper *dsm_session;
+@property (nonatomic, strong) TOSMBCSessionWrapper *smbSessionWrapper;
+@property (nonatomic, strong) NSRecursiveLock *smbSessionLock;
 @property (nonatomic, strong) NSDate *lastRequestDate;
 
-@property (nonatomic, assign) BOOL useInternalNameResolution;
-@property (atomic, assign) BOOL needsReloadSession;
+@property (atomic, assign) BOOL useInternalNameResolution;
 
 /* Operation queue for asynchronous data requests */
 @property (nonatomic, strong) NSOperationQueue *requestsQueue;
@@ -46,7 +46,8 @@
 + (NSString *)relativeSMBPathFromPath:(NSString *)path;
 
 - (void)performCallBackWithBlock:(void(^)(void))block;
-- (void)addRequestOperation:(NSOperation *)op;
+- (NSBlockOperation *)addRequestOperation:(NSBlockOperation *)operation
+                  withBlock:(void(^)(void))operationBlock;
 
 /* SMB Session */
 - (void)inSMBCSession:(void (^)(smb_session *session))block;

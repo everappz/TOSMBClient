@@ -55,6 +55,7 @@
 
 - (void)didSucceedWithFilePath:(NSString *)filePath{
     TOSMBMakeWeakReference();
+    NSParameterAssert(self.session);
     [self.session performCallBackWithBlock:^{
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
@@ -66,6 +67,7 @@
 
 - (void)didFailWithError:(NSError *)error{
     TOSMBMakeWeakReference();
+    NSParameterAssert(self.session);
     [self.session performCallBackWithBlock:^{
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
@@ -88,8 +90,8 @@
     }
     
     self.lastProgress = progress;
-    
     TOSMBMakeWeakReference();
+    NSParameterAssert(self.session);
     [self.session performCallBackWithBlock:^{
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
@@ -144,14 +146,13 @@
         TOSMBMakeStrongFromWeakReference();
         [strongSelf performStartUpload];
     };
-    [operation addExecutionBlock:executionBlock];
     [operation setCompletionBlock:^{
         TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
         [strongSelf removeCancellableOperation:weakOperation];
     }];
-    [self.session addRequestOperation:operation];
+    [self.session addRequestOperation:operation withBlock:executionBlock];
     [self addCancellableOperation:operation];
 }
 
@@ -299,14 +300,13 @@
             [strongSelf finishUpload];
         }
     };
-    [operation addExecutionBlock:executionBlock];
     [operation setCompletionBlock:^{
         TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
         [strongSelf removeCancellableOperation:weakOperation];
     }];
-    [self.session addRequestOperation:operation];
+    [self.session addRequestOperation:operation withBlock:executionBlock];
     [self addCancellableOperation:operation];
 }
 
@@ -323,6 +323,12 @@
                          withObject:nil
                          afterDelay:kTOSMBSessionTransferAsyncDelay];
     };
+    [operation setCompletionBlock:^{
+        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+        TOSMBMakeStrongFromWeakReference();
+        [strongSelf removeCancellableOperation:weakOperation];
+    }];
     [operation addExecutionBlock:executionBlock];
     [[NSOperationQueue mainQueue] addOperation:operation];
     [self addCancellableOperation:operation];
@@ -397,14 +403,13 @@
         TOSMBMakeStrongFromWeakReference();
         [strongSelf performFinishUpload];
     };
-    [operation addExecutionBlock:executionBlock];
     [operation setCompletionBlock:^{
         TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
         TOSMBCheckIfWeakReferenceIsNilAndReturn();
         TOSMBMakeStrongFromWeakReference();
         [strongSelf removeCancellableOperation:weakOperation];
     }];
-    [self.session addRequestOperation:operation];
+    [self.session addRequestOperation:operation withBlock:executionBlock];
     [self addCancellableOperation:operation];
 }
 

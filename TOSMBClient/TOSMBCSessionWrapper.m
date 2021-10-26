@@ -17,11 +17,12 @@
 static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessionWrapperQueueSpecificKey;
 
 @interface TOSMBCSessionWrapper(){
-    dispatch_queue_t    _queue;
+    dispatch_queue_t _queue;
 }
 
 @property (nonatomic,assign) smb_session *smb_session;
-@property (nonatomic,strong) NSMutableDictionary *shares;
+
+@property (nonatomic,strong) NSMutableDictionary<NSString *, NSNumber *> *shares;
 
 @end
 
@@ -33,11 +34,11 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     self = [super init];
     if(self){
         self.smb_session = smb_session_new();
-        if(self.smb_session == NULL){
+        if (self.smb_session == NULL) {
             NSParameterAssert(NO);
             return nil;
         }
-        self.shares = [[NSMutableDictionary alloc] init];
+        self.shares = [[NSMutableDictionary<NSString *, NSNumber *> alloc] init];
         _queue = dispatch_queue_create([[NSString stringWithFormat:@"tosmb_session_wrapper.%@", self] UTF8String], NULL);
         dispatch_queue_set_specific(_queue, kTOSMBCSessionWrapperQueueSpecificKey, (__bridge void *)self, NULL);
     }
@@ -52,17 +53,15 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     TOSMBMakeWeakReference();
     [self inSMBCSession:^(smb_session *session) {
         TOSMBMakeStrongFromWeakReference();
-        if(session != NULL){
-            [strongSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
-                smb_tid shareID = [obj unsignedShortValue];
-                smb_tree_disconnect(session, shareID);
-            }];
-            if(smb_session_is_guest(session) >= 0){
-                smb_session_logoff(session);
-            }
-            smb_session_destroy(session);
-            strongSelf.smb_session = NULL;
+        [strongSelf.shares enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, id  _Nonnull obj, BOOL * _Nonnull stop) {
+            smb_tid shareID = [obj unsignedShortValue];
+            smb_tree_disconnect(session, shareID);
+        }];
+        if(smb_session_is_guest(session) >= 0){
+            smb_session_logoff(session);
         }
+        smb_session_destroy(session);
+        strongSelf.smb_session = NULL;
     }];
 }
 
@@ -75,8 +74,12 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     TOSMBMakeWeakReference();
     dispatch_sync(_queue, ^() {
         TOSMBMakeStrongFromWeakReference();
-        smb_session *smb_session = [strongSelf smb_session];
-        if(smb_session != NULL && block){
+        smb_session *smb_session = strongSelf.smb_session;
+        NSCParameterAssert(smb_session != NULL);
+        if (smb_session == NULL){
+            return;
+        }
+        if (block) {
             block(smb_session);
         }
     });
@@ -98,12 +101,12 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
     NSParameterAssert(shareID>0);
     __block BOOL removeShare = NO;
     __block smb_tid cachedShareID = 0;
-    if(shareName.length>0 && shareID>0){
+    if (shareName.length>0 && shareID>0) {
         TOSMBMakeWeakReference();
         [self inSMBCSession:^(smb_session *session) {
             TOSMBMakeStrongFromWeakReference();
             cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
-            if(shareID!=cachedShareID){
+            if (shareID != cachedShareID) {
                 removeShare = cachedShareID>0;
                 [strongSelf.shares setObject:@(shareID) forKey:shareName];
             }
@@ -135,24 +138,30 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 - (BOOL)isConnected{
     __block BOOL connected = NO;
     [self inSMBCSession:^(smb_session *session) {
-        connected = (session !=NULL && smb_session_is_guest(session) >= 0);
+        connected = smb_session_is_guest(session) >= 0;
     }];
     return connected;
 }
 
 - (BOOL)isValid{
-    const BOOL valid = [self isConnected] &&
-    (NSDate.date.timeIntervalSince1970 - self.lastRequestDate.timeIntervalSince1970) < kTOSMBSessionTimeout &&
+    
+    const BOOL sessionExpired = self.lastRequestDate &&
+    [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kTOSMBSessionTimeout;
+    
+    const BOOL valid =
+    sessionExpired == NO &&
     self.ipAddress.length > 0 &&
-    self.userName.length > 0;
+    self.userName.length > 0 &&
+    self.isConnected;
+    
     return valid;
 }
 
 - (NSString *)sessionKey{
-    return [[self class] sessionKeyForIPAddress:self.ipAddress
-                                         domain:self.domain
-                                       userName:self.userName
-                                       password:self.password];
+    return [TOSMBCSessionWrapper sessionKeyForIPAddress:self.ipAddress
+                                                 domain:self.domain
+                                               userName:self.userName
+                                               password:self.password];
 }
 
 + (NSString *)sessionKeyForIPAddress:(NSString *)ipAddress
