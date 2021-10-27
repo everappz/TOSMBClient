@@ -112,34 +112,6 @@
 
 #pragma mark - Uploading -
 
-- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath
-                                               fullPath:(NSString *)fullPath
-                                                 inTree:(smb_tid)treeID
-{
-    const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
-    __block smb_stat statBasic = NULL;
-    __block smb_stat statStandard = NULL;
-    [self.session inSMBCSession:^(smb_session *session) {
-        statBasic = smb_fstat_basic(session, treeID, fileCString);
-        statStandard = smb_fstat_standard(session, treeID, fileCString);
-    }];
-    
-    if (statBasic == NULL || statStandard == NULL) {
-        return nil;
-    }
-    
-    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithBasicFileInfoStat:statBasic
-                                                 standardFileInfoStat:statStandard
-                                                             fullPath:filePath];
-    
-    [self.session inSMBCSession:^(smb_session *session) {
-        smb_stat_destroy(statBasic);
-        smb_stat_destroy(statStandard);
-    }];
-    
-    return file;
-}
-
 - (void)startTaskInternal{
     NSBlockOperation *operation = [[NSBlockOperation alloc] init];
     TOSMBMakeWeakReference();

@@ -391,7 +391,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
                     if (name[0] == '.') { //skip hidden files
                         continue;
                     }
-                    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
+                    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryPath:path];
                     if(file){
                         [fileList addObject:file];
                     }
@@ -556,26 +556,21 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
     const char *relativePathCString = [relativePath cStringUsingEncoding:NSUTF8StringEncoding];
     
-    __block smb_stat statBasic = NULL;
-    __block smb_stat statStandard = NULL;
+    __block smb_stat stat = NULL;
     [self inSMBCSession:^(smb_session *session) {
-        statBasic = smb_fstat_basic(session, shareID, relativePathCString);
-        statStandard = smb_fstat_standard(session, shareID, relativePathCString);
+        stat = smb_fstat(session, shareID, relativePathCString);
     }];
     
-    if (statBasic == NULL || statStandard == NULL) {
+    if (stat == NULL) {
         if (error) {
             resultError = errorForErrorCode(TOSMBSessionErrorCodeFileNotFound);
             *error = resultError;
         }
     }
     else {
-        file = [[TOSMBSessionFile alloc] initWithBasicFileInfoStat:statBasic
-                                              standardFileInfoStat:statStandard
-                                                          fullPath:path];
+        file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:path];
         [self inSMBCSession:^(smb_session *session) {
-            smb_stat_destroy(statBasic);
-            smb_stat_destroy(statStandard);
+            smb_stat_destroy(stat);
         }];
     }
     
@@ -851,7 +846,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
                 if([itemName isEqualToString:@"."] || [itemName isEqualToString:@".."]){
                     continue;
                 }
-                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryFilePath:path];
+                TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:item parentDirectoryPath:path];
                 if(file){
                     if(file.directory){
                         [directories addObject:file];
@@ -988,7 +983,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     
     __block smb_stat stat = NULL;
     [self inSMBCSession:^(smb_session *session) {
-        stat = smb_fstat_basic(session, shareID, relativePathCString);
+        stat = smb_fstat(session, shareID, relativePathCString);
     }];
     
     if (stat == NULL) {
@@ -1041,7 +1036,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
             //double check
             __block smb_stat stat = NULL;
             [self inSMBCSession:^(smb_session *session) {
-                stat = smb_fstat_basic(session, shareID, relativePathCString);
+                stat = smb_fstat(session, shareID, relativePathCString);
             }];
             
             if(stat==NULL){

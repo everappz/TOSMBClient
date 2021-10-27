@@ -34,9 +34,7 @@
     return self;
 }
 
-- (instancetype)initWithStat:(smb_stat)stat
-     parentDirectoryFilePath:(NSString *)parentDirectoryFilePath
-{
+- (instancetype)initWithStat:(smb_stat)stat parentDirectoryPath:(NSString *)parentDirectoryPath {
     if (stat == NULL){
         return nil;
     }
@@ -44,7 +42,7 @@
         const char *name = smb_stat_name(stat);
         if (name != NULL) {
             _name = [[[NSString alloc] initWithBytes:name length:strlen(name) encoding:NSUTF8StringEncoding] copy];
-            _fullPath = [[parentDirectoryFilePath stringByAppendingPathComponent:_name] copy];
+            _fullPath = [[parentDirectoryPath stringByAppendingPathComponent:_name] copy];
         }
         else{
             @try{NSParameterAssert(NO);}@catch(NSException *exc){}
@@ -64,15 +62,9 @@
     return self;
 }
 
-- (instancetype)initWithBasicFileInfoStat:(smb_stat)basicFileInfoStat
-                     standardFileInfoStat:(smb_stat)standardFileInfoStat
-                                 fullPath:(NSString *)fullPath
+- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath
 {
-    if (basicFileInfoStat == NULL){
-        NSParameterAssert(NO);
-        return nil;
-    }
-    if (standardFileInfoStat == NULL){
+    if (stat == NULL){
         NSParameterAssert(NO);
         return nil;
     }
@@ -81,22 +73,23 @@
         return nil;
     }
     
-    if (self = [self init])
-    {
+    if (self = [self init]) {
         _name = [[fullPath lastPathComponent] copy];
         _fullPath = [fullPath copy];
         
-        _directory = (smb_stat_get(basicFileInfoStat, SMB_STAT_ISDIR) != 0);
-        _modificationTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_MTIME);
-        _creationTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_CTIME);
-        _accessTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_ATIME);
-        _writeTimestamp = smb_stat_get(basicFileInfoStat, SMB_STAT_WTIME);
+        _fileSize = smb_stat_get(stat, SMB_STAT_SIZE);
+        _allocationSize = smb_stat_get(stat, SMB_STAT_ALLOC_SIZE);
+        _directory = (smb_stat_get(stat, SMB_STAT_ISDIR) != 0);
+        _modificationTimestamp = smb_stat_get(stat, SMB_STAT_MTIME);
+        _creationTimestamp = smb_stat_get(stat, SMB_STAT_CTIME);
+        _accessTimestamp = smb_stat_get(stat, SMB_STAT_ATIME);
+        _writeTimestamp = smb_stat_get(stat, SMB_STAT_WTIME);
         _modificationTime = [self dateFromLDAPTimeStamp:_modificationTimestamp];
         _creationTime = [self dateFromLDAPTimeStamp:_creationTimestamp];
-        
-        _fileSize = smb_stat_get(standardFileInfoStat, SMB_STAT_SIZE);
-        _allocationSize = smb_stat_get(standardFileInfoStat, SMB_STAT_ALLOC_SIZE);
-        
+        uint64_t writeTimestampDep = smb_stat_get(stat, SMB_STAT_WTIME_DEP);
+        if (writeTimestampDep > 0) {
+            _modificationTime = [NSDate dateWithTimeIntervalSince1970:writeTimestampDep];
+        }
         [self normalizeFullPath];
     }
     return self;

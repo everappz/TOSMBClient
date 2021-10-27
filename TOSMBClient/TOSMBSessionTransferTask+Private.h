@@ -44,4 +44,8 @@
 
 - (void)removeCancellableOperation:(NSOperation *)operation;
 
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath
+                                               fullPath:(NSString *)fullPath
+                                                 inTree:(smb_tid)treeID;
+
 @end

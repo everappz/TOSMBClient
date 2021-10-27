@@ -35,11 +35,9 @@
  * @param stat The opaque pointer for this stat value
  * @param path The absolute file path to this file's parent directory. Used to generate this file's own file path.
  */
-- (instancetype)initWithStat:(smb_stat)stat parentDirectoryFilePath:(NSString *)path;
+- (instancetype)initWithStat:(smb_stat)stat parentDirectoryPath:(NSString *)path;
 
-- (instancetype)initWithBasicFileInfoStat:(smb_stat)basicFileInfoStat
-                     standardFileInfoStat:(smb_stat)standardFileInfoStat
-                                 fullPath:(NSString *)fullPath;
+- (instancetype)initWithStat:(smb_stat)stat fullPath:(NSString *)fullPath;
 
 /**
  * Init a new instance representing the share itself, which in the case of libSMD, is simply another directory

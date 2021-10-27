@@ -68,4 +68,29 @@ NSTimeInterval kTOSMBSessionTransferAsyncDelay = 0.05;
     }
 }
 
+#pragma mark - Request File -
+
+- (TOSMBSessionFile *)requestFileForItemAtFormattedPath:(NSString *)filePath
+                                               fullPath:(NSString *)fullPath
+                                                 inTree:(smb_tid)treeID
+{
+    const char *fileCString = [filePath cStringUsingEncoding:NSUTF8StringEncoding];
+    __block smb_stat stat = NULL;
+    [self.session inSMBCSession:^(smb_session *session) {
+        stat = smb_fstat(session, treeID, fileCString);
+    }];
+    
+    if (stat == NULL) {
+        return nil;
+    }
+    
+    TOSMBSessionFile *file = [[TOSMBSessionFile alloc] initWithStat:stat fullPath:filePath];
+    
+    [self.session inSMBCSession:^(smb_session *session) {
+        smb_stat_destroy(stat);
+    }];
+    
+    return file;
+}
+
 @end
