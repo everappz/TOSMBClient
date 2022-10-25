@@ -77,3 +77,5 @@ extern char TONetBIOSNameServiceCTypeForType(char type);
 
 extern NSString *localizedStringForErrorCode(TOSMBSessionErrorCode errorCode);
 extern NSError *errorForErrorCode(TOSMBSessionErrorCode errorCode);
+
+extern uint16_t TOSMBShareIDUnknown;

@@ -176,15 +176,14 @@
     //Next attach to the share we'll be using
     NSString *shareName = [TOSMBSession shareNameFromPath:self.destinationFilePath];
     const char *shareCString = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
-    __block smb_tid treeID = 0;
-    treeID = [self.session cachedShareIDForName:shareName];
-    if (treeID == 0) {
+    __block smb_tid treeID = [self.session cachedShareIDForName:shareName];
+    if (treeID == TOSMBShareIDUnknown) {
         [self.session inSMBCSession:^(smb_session *session) {
             smb_tree_connect(session, shareCString,&treeID);
         }];
     }
     self.treeID = treeID;
-    if (treeID == 0) {
+    if (treeID == TOSMBShareIDUnknown) {
         [self.session removeCachedShareIDForName:shareName];
         [self didFailWithError:errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed)];
         [self cleanUp];

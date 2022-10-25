@@ -14,6 +14,7 @@
 #import "smb_stat.h"
 #import "smb_dir.h"
 
+
 static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessionWrapperQueueSpecificKey;
 
 @interface TOSMBCSessionWrapper(){
@@ -86,31 +87,34 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 }
 
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
-    NSParameterAssert(shareName.length>0);
-    __block smb_tid share_id = 0;
+    NSParameterAssert(shareName.length > 0);
+    __block smb_tid share_id = TOSMBShareIDUnknown;
     TOSMBMakeWeakReference();
     [self inSMBCSession:^(smb_session *session) {
         TOSMBMakeStrongFromWeakReference();
-        share_id = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
+        NSNumber *obj = [strongSelf.shares objectForKey:shareName];
+        if (obj) {
+            share_id = [obj unsignedShortValue];
+        }
     }];
     return share_id;
 }
 
 - (void)cacheShareID:(smb_tid)shareID forName:(NSString *)shareName{
-    NSParameterAssert(shareName.length>0);
-    NSParameterAssert(shareID>0);
+    NSParameterAssert(shareName.length > 0);
+    NSParameterAssert(shareID != TOSMBShareIDUnknown);
     __block BOOL removeShare = NO;
-    __block smb_tid cachedShareID = 0;
-    if (shareName.length>0 && shareID>0) {
+    __block smb_tid cachedShareID = TOSMBShareIDUnknown;
+    if (shareName.length > 0 && shareID != TOSMBShareIDUnknown) {
         TOSMBMakeWeakReference();
+        cachedShareID = [self cachedShareIDForName:shareName];
         [self inSMBCSession:^(smb_session *session) {
             TOSMBMakeStrongFromWeakReference();
-            cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
             if (shareID != cachedShareID) {
-                removeShare = cachedShareID>0;
+                removeShare = cachedShareID != TOSMBShareIDUnknown;
                 [strongSelf.shares setObject:@(shareID) forKey:shareName];
             }
-            if(removeShare){
+            if (removeShare) {
                 smb_tree_disconnect(session, cachedShareID);
             }
         }];
@@ -118,17 +122,17 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 }
 
 - (void)removeCachedShareIDForName:(NSString *)shareName{
-    NSParameterAssert(shareName.length>0);
-    if(shareName.length>0){
-        __block smb_tid cachedShareID = 0;
+    NSParameterAssert(shareName.length > 0);
+    if (shareName.length > 0) {
+        __block smb_tid cachedShareID = TOSMBShareIDUnknown;
         __block BOOL removeShare = NO;
         TOSMBMakeWeakReference();
+        cachedShareID = [self cachedShareIDForName:shareName];
+        removeShare = (cachedShareID != TOSMBShareIDUnknown);
         [self inSMBCSession:^(smb_session *session) {
             TOSMBMakeStrongFromWeakReference();
-            cachedShareID = [[strongSelf.shares objectForKey:shareName] unsignedShortValue];
-            removeShare = (cachedShareID>0);
             [strongSelf.shares removeObjectForKey:shareName];
-            if(removeShare){
+            if (removeShare) {
                 smb_tree_disconnect(session, cachedShareID);
             }
         }];
@@ -144,7 +148,6 @@ static const void * const kTOSMBCSessionWrapperQueueSpecificKey = &kTOSMBCSessio
 }
 
 - (BOOL)isValid{
-    
     const BOOL sessionExpired = self.lastRequestDate &&
     [[NSDate date] timeIntervalSinceDate:self.lastRequestDate] > kTOSMBSessionTimeout;
     

@@ -24,6 +24,9 @@
 #import "netbios_defs.h"
 #import "smb_defs.h"
 
+uint16_t TOSMBShareIDUnknown = 0xffff;
+
+
 TONetBIOSNameServiceType TONetBIOSNameServiceTypeForCType(char type)
 {
     switch (type) {

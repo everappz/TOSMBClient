@@ -288,18 +288,18 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //If not, make a new connection
     const char *cStringName = [shareName cStringUsingEncoding:NSUTF8StringEncoding];
     __block smb_tid shareID = [self cachedShareIDForName:shareName];
-    if (shareID == 0) {
+    if (shareID == TOSMBShareIDUnknown) {
         [self inSMBCSession:^(smb_session *session) {
             smb_tree_connect(session, cStringName, &shareID);
         }];
     }
-    if (shareID == 0 ) {
+    if (shareID == TOSMBShareIDUnknown) {
         [self removeCachedShareIDForName:shareName];
         if (error) {
             NSError *resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
             *error = resultError;
         }
-        return 0;
+        return TOSMBShareIDUnknown;
     }
     else{
         [self cacheShareID:shareID forName:shareName];
@@ -362,7 +362,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if(shareID==0){
+    if (shareID == TOSMBShareIDUnknown) {
         return nil;
     }
     
@@ -538,7 +538,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if (shareID == 0) {
+    if (shareID == TOSMBShareIDUnknown) {
         if (error) {
             resultError = errorForErrorCode(TOSMBSessionErrorCodeShareConnectionFailed);
             *error = resultError;
@@ -644,7 +644,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if(shareID==0){
+    if (shareID == TOSMBShareIDUnknown) {
         return NO;
     }
     
@@ -733,7 +733,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if(shareID==0){
+    if (shareID == TOSMBShareIDUnknown) {
         return NO;
     }
     
@@ -974,7 +974,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     //Connect to that share
     //If not, make a new connection
     smb_tid shareID = [self connectToShareWithName:shareName error:error];
-    if(shareID==0){
+    if (shareID == TOSMBShareIDUnknown) {
         return NO;
     }
     
@@ -1191,7 +1191,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
 
 - (smb_tid)cachedShareIDForName:(NSString *)shareName{
     NSParameterAssert(shareName.length>0);
-    __block smb_tid share_id = 0;
+    __block smb_tid share_id = TOSMBShareIDUnknown;
     [self.smbSessionLock lock];
     share_id = [self.smbSessionWrapper cachedShareIDForName:shareName];
     [self.smbSessionLock unlock];
