@@ -862,6 +862,7 @@ const NSTimeInterval kTOSMBSessionTimeout = 30.0;
     
     if(items){
         [*items addObjectsFromArray:fileItems];
+        [*items addObjectsFromArray:directories];
     }
     
     for(TOSMBSessionFile *dir in directories){
