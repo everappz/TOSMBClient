@@ -411,7 +411,8 @@
         TOSMBMakeStrongFromWeakReference();
         int result = [strongSelf performDownloadNextChunk];
         if (result == 1) {
-            [strongSelf downloadNextChunkAfterDelay];
+            //[strongSelf downloadNextChunkAfterDelay];
+            [strongSelf downloadNextChunk];
         }
         else if (result == 0) {
             [strongSelf finishDownload];
@@ -427,29 +428,29 @@
     [self addCancellableOperation:operation];
 }
 
-- (void)downloadNextChunkAfterDelay {
-    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    TOSMBMakeWeakReferenceForOperation();
-    TOSMBMakeWeakReference();
-    id executionBlock = ^{
-        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
-        TOSMBCheckIfWeakReferenceIsNilAndReturn();
-        TOSMBMakeStrongFromWeakReference();
-        NSParameterAssert([NSThread isMainThread]);
-        [strongSelf performSelector:@selector(downloadNextChunk)
-                         withObject:nil
-                         afterDelay:kTOSMBSessionTransferAsyncDelay];
-    };
-    [operation setCompletionBlock:^{
-        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
-        TOSMBCheckIfWeakReferenceIsNilAndReturn();
-        TOSMBMakeStrongFromWeakReference();
-        [strongSelf removeCancellableOperation:weakOperation];
-    }];
-    [operation addExecutionBlock:executionBlock];
-    [[NSOperationQueue mainQueue] addOperation:operation];
-    [self addCancellableOperation:operation];
-}
+//- (void)downloadNextChunkAfterDelay {
+//    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+//    TOSMBMakeWeakReferenceForOperation();
+//    TOSMBMakeWeakReference();
+//    id executionBlock = ^{
+//        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+//        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+//        TOSMBMakeStrongFromWeakReference();
+//        NSParameterAssert([NSThread isMainThread]);
+//        [strongSelf performSelector:@selector(downloadNextChunk)
+//                         withObject:nil
+//                         afterDelay:kTOSMBSessionTransferAsyncDelay];
+//    };
+//    [operation setCompletionBlock:^{
+//        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+//        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+//        TOSMBMakeStrongFromWeakReference();
+//        [strongSelf removeCancellableOperation:weakOperation];
+//    }];
+//    [operation addExecutionBlock:executionBlock];
+//    [[NSOperationQueue mainQueue] addOperation:operation];
+//    [self addCancellableOperation:operation];
+//}
 
 - (int)performDownloadNextChunk {
     NSInteger bufferSize = kTOSMBSessionTransferTaskBufferSize;

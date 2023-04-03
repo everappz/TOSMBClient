@@ -103,7 +103,8 @@
 
 - (void)didUpdateWriteBytes:(NSData *)bytesWritten
           totalBytesWritten:(uint64_t)totalBytesWritten
-         totalBytesExpected:(uint64_t)totalBytesExpected{
+         totalBytesExpected:(uint64_t)totalBytesExpected
+{
     if (self.countOfBytesExpectedToSend > 0){
         float currentProgress = (float)self.countOfBytesSend/(float)self.countOfBytesExpectedToSend;
         [self progressDidChange:currentProgress];
@@ -269,7 +270,8 @@
         TOSMBMakeStrongFromWeakReference();
         int result = [strongSelf performUploadNextChunk];
         if (result == 1) {
-            [strongSelf uploadNextChunkAfterDelay];
+            //[strongSelf uploadNextChunkAfterDelay];
+            [strongSelf uploadNextChunk];
         }
         else if (result == 0) {
             [strongSelf finishUpload];
@@ -285,29 +287,29 @@
     [self addCancellableOperation:operation];
 }
 
-- (void)uploadNextChunkAfterDelay {
-    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
-    TOSMBMakeWeakReferenceForOperation();
-    TOSMBMakeWeakReference();
-    id executionBlock = ^{
-        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
-        TOSMBCheckIfWeakReferenceIsNilAndReturn();
-        TOSMBMakeStrongFromWeakReference();
-        NSParameterAssert([NSThread isMainThread]);
-        [strongSelf performSelector:@selector(uploadNextChunk)
-                         withObject:nil
-                         afterDelay:kTOSMBSessionTransferAsyncDelay];
-    };
-    [operation setCompletionBlock:^{
-        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
-        TOSMBCheckIfWeakReferenceIsNilAndReturn();
-        TOSMBMakeStrongFromWeakReference();
-        [strongSelf removeCancellableOperation:weakOperation];
-    }];
-    [operation addExecutionBlock:executionBlock];
-    [[NSOperationQueue mainQueue] addOperation:operation];
-    [self addCancellableOperation:operation];
-}
+//- (void)uploadNextChunkAfterDelay {
+//    NSBlockOperation *operation = [[NSBlockOperation alloc] init];
+//    TOSMBMakeWeakReferenceForOperation();
+//    TOSMBMakeWeakReference();
+//    id executionBlock = ^{
+//        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+//        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+//        TOSMBMakeStrongFromWeakReference();
+//        NSParameterAssert([NSThread isMainThread]);
+//        [strongSelf performSelector:@selector(uploadNextChunk)
+//                         withObject:nil
+//                         afterDelay:kTOSMBSessionTransferAsyncDelay];
+//    };
+//    [operation setCompletionBlock:^{
+//        TOSMBCheckIfWeakReferenceForOperationIsCancelledOrNilAndReturn();
+//        TOSMBCheckIfWeakReferenceIsNilAndReturn();
+//        TOSMBMakeStrongFromWeakReference();
+//        [strongSelf removeCancellableOperation:weakOperation];
+//    }];
+//    [operation addExecutionBlock:executionBlock];
+//    [[NSOperationQueue mainQueue] addOperation:operation];
+//    [self addCancellableOperation:operation];
+//}
 
 - (int)performUploadNextChunk{
     NSInteger bufferSize = kTOSMBSessionTransferTaskBufferSize;

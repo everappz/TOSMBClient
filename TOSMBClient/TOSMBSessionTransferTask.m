@@ -9,8 +9,8 @@
 #import "TOSMBSessionTransferTask.h"
 #import "TOSMBSessionTransferTask+Private.h"
 
-NSInteger kTOSMBSessionTransferTaskBufferSize = 32768;
-NSInteger kTOSMBSessionTransferTaskCallbackDataBufferSize = 262144; // 8 * kTOSMBSessionTransferTaskBufferSize
+NSInteger kTOSMBSessionTransferTaskBufferSize = 32 * 1024; //32 KB
+NSInteger kTOSMBSessionTransferTaskCallbackDataBufferSize = 1 * 1024 * 1024; // 1 MB
 NSTimeInterval kTOSMBSessionTransferAsyncDelay = 0.05;
 
 
