@@ -39,6 +39,10 @@ Pod::Spec.new do |s|
     'TOSMBClient/NSString+TOSMB.h'
   ]
 
+  s.pod_target_xcconfig = {
+    'HEADER_SEARCH_PATHS' => '"${PODS_ROOT}/Headers/Public/libdsm/src" "${PODS_ROOT}/Headers/Public/libdsm/include/bdsm"'
+  }
+
   s.frameworks   = 'Foundation'
   s.requires_arc = true
 

@@ -1,7 +1,11 @@
 platform :ios, '12.0'
 
 target 'TOSMBClientPodTest' do
-  pod 'TOSMBClient', :path => '../'
-  pod 'libdsm', :path => '../TOSMBClient/libdsm/'
-  pod 'libtasn1', :path => '../TOSMBClient/libdsm/libtasn1/'
+  # pod 'TOSMBClient', :path => '../'
+  # pod 'libdsm', :path => '../TOSMBClient/libdsm/'
+  # pod 'libtasn1', :path => '../TOSMBClient/libdsm/libtasn1/'
+  
+  pod 'TOSMBClient', :git => 'git@github.com:everappz/TOSMBClient.git', :commit => 'f18cddac5cda3d8502b675ce32372870cfef2eb2'
+  pod 'libdsm', :git => 'git@github.com:everappz/libdsm.git', :commit => '8668e22c75681951428258f99bf78fcff1febd8b'
+  pod 'libtasn1', :git => 'git@github.com:everappz/libtasn1.git', :commit => '4e28d24967c5f12343341096bcf27203f498b547'
 end

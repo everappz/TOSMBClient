@@ -4,7 +4,10 @@
       "Bash(xcodebuild:*)",
       "Bash(test:*)",
       "Bash(cd:*)",
-      "Bash(pod install:*)"
+      "Bash(pod install:*)",
+      "Bash(git submodule:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(ls:*)"
     ]
   }
 }
