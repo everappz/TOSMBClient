@@ -1,0 +1,28 @@
+PODS:
+  - libdsm (0.4.0):
+    - libtasn1 (~> 4.18)
+  - libtasn1 (4.18.0)
+  - TOSMBClient (1.0.0):
+    - libdsm (~> 0.4)
+
+DEPENDENCIES:
+  - libdsm (from `../TOSMBClient/libdsm/`)
+  - libtasn1 (from `../TOSMBClient/libdsm/libtasn1/`)
+  - TOSMBClient (from `../`)
+
+EXTERNAL SOURCES:
+  libdsm:
+    :path: "../TOSMBClient/libdsm/"
+  libtasn1:
+    :path: "../TOSMBClient/libdsm/libtasn1/"
+  TOSMBClient:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  libdsm: 12d99b8f22c365e9caf3fc0e6924d060084b8e93
+  libtasn1: 25dcc5c9803e15f955aa49b628a14dfe0fefd820
+  TOSMBClient: 2105f78086735f6ef8a9fcda87ae862c748229f3
+
+PODFILE CHECKSUM: 3bfff95a877b3bf6739085b1cbe072b703dc08d4
+
+COCOAPODS: 1.16.2

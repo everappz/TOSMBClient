@@ -1,0 +1,7 @@
+platform :ios, '12.0'
+
+target 'TOSMBClientPodTest' do
+  pod 'TOSMBClient', :path => '../'
+  pod 'libdsm', :path => '../TOSMBClient/libdsm/'
+  pod 'libtasn1', :path => '../TOSMBClient/libdsm/libtasn1/'
+end
