@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#import <TOSMBClient/TOSMBClient.h>
 
 @interface AppDelegate : UIResponder <UIApplicationDelegate>
 @property (nonatomic, strong) UIWindow *window;
@@ -9,6 +10,9 @@
     self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
     self.window.rootViewController = [[UIViewController alloc] init];
     [self.window makeKeyAndVisible];
+
+    TOSMBSession *session = [[TOSMBSession alloc] init];
+    
     return YES;
 }
 @end

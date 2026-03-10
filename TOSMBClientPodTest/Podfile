@@ -5,7 +5,7 @@ target 'TOSMBClientPodTest' do
   # pod 'libdsm', :path => '../TOSMBClient/libdsm/'
   # pod 'libtasn1', :path => '../TOSMBClient/libdsm/libtasn1/'
   
-  pod 'TOSMBClient', :git => 'git@github.com:everappz/TOSMBClient.git', :commit => 'b7cdb81e472ec5d0e39788ddab69b5b47657ec83'
-  pod 'libdsm', :git => 'git@github.com:everappz/libdsm.git', :commit => '365a1f551058b8b21c27f883d7a649cb38675af1'
   pod 'libtasn1', :git => 'git@github.com:everappz/libtasn1.git', :commit => '4e28d24967c5f12343341096bcf27203f498b547'
+  pod 'libdsm', :git => 'git@github.com:everappz/libdsm.git', :commit => '365a1f551058b8b21c27f883d7a649cb38675af1'
+  pod 'TOSMBClient', :git => 'git@github.com:everappz/TOSMBClient.git', :commit => 'b7cdb81e472ec5d0e39788ddab69b5b47657ec83'
 end
