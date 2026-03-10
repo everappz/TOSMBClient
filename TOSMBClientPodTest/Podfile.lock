@@ -6,23 +6,37 @@ PODS:
     - libdsm (~> 0.4)
 
 DEPENDENCIES:
-  - libdsm (from `../TOSMBClient/libdsm/`)
-  - libtasn1 (from `../TOSMBClient/libdsm/libtasn1/`)
-  - TOSMBClient (from `../`)
+  - "libdsm (from `git@github.com:everappz/libdsm.git`, commit `8668e22c75681951428258f99bf78fcff1febd8b`)"
+  - "libtasn1 (from `git@github.com:everappz/libtasn1.git`, commit `4e28d24967c5f12343341096bcf27203f498b547`)"
+  - "TOSMBClient (from `git@github.com:everappz/TOSMBClient.git`, commit `5a994676016e043dd61abc20b4225d9e2401f2f5`)"
 
 EXTERNAL SOURCES:
   libdsm:
-    :path: "../TOSMBClient/libdsm/"
+    :commit: 8668e22c75681951428258f99bf78fcff1febd8b
+    :git: "git@github.com:everappz/libdsm.git"
   libtasn1:
-    :path: "../TOSMBClient/libdsm/libtasn1/"
+    :commit: 4e28d24967c5f12343341096bcf27203f498b547
+    :git: "git@github.com:everappz/libtasn1.git"
   TOSMBClient:
-    :path: "../"
+    :commit: 5a994676016e043dd61abc20b4225d9e2401f2f5
+    :git: "git@github.com:everappz/TOSMBClient.git"
+
+CHECKOUT OPTIONS:
+  libdsm:
+    :commit: 8668e22c75681951428258f99bf78fcff1febd8b
+    :git: "git@github.com:everappz/libdsm.git"
+  libtasn1:
+    :commit: 4e28d24967c5f12343341096bcf27203f498b547
+    :git: "git@github.com:everappz/libtasn1.git"
+  TOSMBClient:
+    :commit: 5a994676016e043dd61abc20b4225d9e2401f2f5
+    :git: "git@github.com:everappz/TOSMBClient.git"
 
 SPEC CHECKSUMS:
-  libdsm: 12d99b8f22c365e9caf3fc0e6924d060084b8e93
+  libdsm: 37f431a44272b250597b2df8eccfd03f2252a650
   libtasn1: 25dcc5c9803e15f955aa49b628a14dfe0fefd820
-  TOSMBClient: 2105f78086735f6ef8a9fcda87ae862c748229f3
+  TOSMBClient: 2c6504154da8d6ca040ca9b58a33ecfc3f4e7f91
 
-PODFILE CHECKSUM: 64fbe9f7c690657b2f31f2cef350bd35ff755539
+PODFILE CHECKSUM: 689053df79808787079f1f85635feb548fd45835
 
 COCOAPODS: 1.16.2
