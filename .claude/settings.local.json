@@ -7,7 +7,8 @@
       "Bash(pod install:*)",
       "Bash(git submodule:*)",
       "Bash(git ls-tree:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(pod deintegrate && pod install 2>&1)"
     ]
   }
 }

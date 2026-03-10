@@ -7,19 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0A3C2D8C7F587B2C7B94EA36 /* libPods-TOSMBClientPodTest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C49A17FD6B35578AE0D081B3 /* libPods-TOSMBClientPodTest.a */; };
 		1984F15889B70471ECA5353A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 85872FF4363A476BBB8CB315 /* Foundation.framework */; };
 		B044183E5D84031D2BC44DFC /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 84750A2210565348E482448E /* main.m */; };
+		C8BF08B279D695F1693D84C1 /* libPods-TOSMBClientPodTest.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FFE68B5D5D7D9252AE2F634C /* libPods-TOSMBClientPodTest.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		01DE8E291628DBBBF3DA8483 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		3747FB35CB44F4F1720E8AF0 /* TOSMBClientPodTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TOSMBClientPodTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3AF4283B0F0CE13EF136C3B6 /* Pods-TOSMBClientPodTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TOSMBClientPodTest.debug.xcconfig"; path = "Target Support Files/Pods-TOSMBClientPodTest/Pods-TOSMBClientPodTest.debug.xcconfig"; sourceTree = "<group>"; };
 		84750A2210565348E482448E /* main.m */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		85872FF4363A476BBB8CB315 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
-		ACBD6FA4D6784EC0E11DCF8F /* Pods-TOSMBClientPodTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TOSMBClientPodTest.release.xcconfig"; path = "Target Support Files/Pods-TOSMBClientPodTest/Pods-TOSMBClientPodTest.release.xcconfig"; sourceTree = "<group>"; };
-		B84DEAC337671A01F83B132D /* Pods-TOSMBClientPodTest.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TOSMBClientPodTest.debug.xcconfig"; path = "Target Support Files/Pods-TOSMBClientPodTest/Pods-TOSMBClientPodTest.debug.xcconfig"; sourceTree = "<group>"; };
-		C49A17FD6B35578AE0D081B3 /* libPods-TOSMBClientPodTest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TOSMBClientPodTest.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		EDDEDA881535C26DB05A4521 /* Pods-TOSMBClientPodTest.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-TOSMBClientPodTest.release.xcconfig"; path = "Target Support Files/Pods-TOSMBClientPodTest/Pods-TOSMBClientPodTest.release.xcconfig"; sourceTree = "<group>"; };
+		FFE68B5D5D7D9252AE2F634C /* libPods-TOSMBClientPodTest.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-TOSMBClientPodTest.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -28,7 +28,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1984F15889B70471ECA5353A /* Foundation.framework in Frameworks */,
-				0A3C2D8C7F587B2C7B94EA36 /* libPods-TOSMBClientPodTest.a in Frameworks */,
+				C8BF08B279D695F1693D84C1 /* libPods-TOSMBClientPodTest.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -47,7 +47,7 @@
 			isa = PBXGroup;
 			children = (
 				05A138E6B012445CA7BEDD6A /* iOS */,
-				C49A17FD6B35578AE0D081B3 /* libPods-TOSMBClientPodTest.a */,
+				FFE68B5D5D7D9252AE2F634C /* libPods-TOSMBClientPodTest.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -61,24 +61,24 @@
 			name = Sources;
 			sourceTree = "<group>";
 		};
+		6C8F5BA09E425FD0C2ACBC19 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				EDDEDA881535C26DB05A4521 /* Pods-TOSMBClientPodTest.release.xcconfig */,
+				3AF4283B0F0CE13EF136C3B6 /* Pods-TOSMBClientPodTest.debug.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		88839E635500CDDCB4259AA8 = {
 			isa = PBXGroup;
 			children = (
 				EF9AFE8BABB161B67C65D8E5 /* Products */,
 				15ACF6256AD9FCED331636FA /* Frameworks */,
 				1837341A895422692CCC2BBE /* Sources */,
-				9AD6F603C2ECEA50164C82E0 /* Pods */,
+				6C8F5BA09E425FD0C2ACBC19 /* Pods */,
 			);
-			sourceTree = "<group>";
-		};
-		9AD6F603C2ECEA50164C82E0 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				ACBD6FA4D6784EC0E11DCF8F /* Pods-TOSMBClientPodTest.release.xcconfig */,
-				B84DEAC337671A01F83B132D /* Pods-TOSMBClientPodTest.debug.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		EF9AFE8BABB161B67C65D8E5 /* Products */ = {
@@ -96,7 +96,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 6DF73B562EFA39665F36D102 /* Build configuration list for PBXNativeTarget "TOSMBClientPodTest" */;
 			buildPhases = (
-				81070873D13F5610DDD078EF /* [CP] Check Pods Manifest.lock */,
+				CBEA36DB376BD702EB429411 /* [CP] Check Pods Manifest.lock */,
 				CEAB14DBC90634D560BD596A /* Sources */,
 				DBB4282C881105F6D0A7C318 /* Frameworks */,
 				B04F45788A4F39F39EAA53A6 /* Resources */,
@@ -150,7 +150,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		81070873D13F5610DDD078EF /* [CP] Check Pods Manifest.lock */ = {
+		CBEA36DB376BD702EB429411 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -242,7 +242,7 @@
 		};
 		295CB61C8BA0ED0876AD4DE7 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B84DEAC337671A01F83B132D /* Pods-TOSMBClientPodTest.debug.xcconfig */;
+			baseConfigurationReference = 3AF4283B0F0CE13EF136C3B6 /* Pods-TOSMBClientPodTest.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -261,7 +261,7 @@
 		};
 		580EAA296EB5A86F3A87971E /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = ACBD6FA4D6784EC0E11DCF8F /* Pods-TOSMBClientPodTest.release.xcconfig */;
+			baseConfigurationReference = EDDEDA881535C26DB05A4521 /* Pods-TOSMBClientPodTest.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
