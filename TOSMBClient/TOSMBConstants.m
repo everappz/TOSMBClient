@@ -51,34 +51,31 @@ char TONetBIOSNameServiceCTypeForType(char type)
 
 NSString *localizedStringForErrorCode(TOSMBSessionErrorCode errorCode)
 {
-    NSString *errorMessage;
-    
     switch (errorCode) {
         case TOSMBSessionErrorCodeUnableToResolveAddress:
-            errorMessage = @"Insufficient information to resolve device address.";
-            break;
+            return NSLocalizedString(@"Insufficient information to resolve device address.", @"");
+
         case TOSMBSessionErrorCodeUnableToConnect:
-            errorMessage = @"Unable to connect to device.";
-            break;
+            return NSLocalizedString(@"Unable to connect to device.", @"");
+
         case TOSMBSessionErrorCodeAuthenticationFailed:
-            errorMessage = @"Login authentication failed.";
-            break;
+            return NSLocalizedString(@"Login authentication failed.", @"");
+
         case TOSMBSessionErrorCodeShareConnectionFailed:
-            errorMessage = @"Unable to connect to share.";
-            break;
+            return NSLocalizedString(@"Unable to connect to share.", @"");
+
         case TOSMBSessionErrorCodeFileNotFound:
-            errorMessage = @"Unable to locate file.";
-            break;
+            return NSLocalizedString(@"Unable to locate file.", @"");
+
         case TOSMBSessionErrorCodeDirectoryDownloaded:
-            errorMessage = @"Unable to download a directory.";
-            break;
+            return NSLocalizedString(@"Unable to download a directory.", @"");
+
         case TOSMBSessionErrorCodeUnknown:
         default:
-            errorMessage = @"Unknown Error Occurred.";
-            break;
+            return NSLocalizedString(@"Unknown Error Occurred.", @"");
     }
-    
-    return NSLocalizedString(errorMessage, @"");
+
+    return NSLocalizedString(@"Unknown Error Occurred.", @"");
 }
 
 NSError *errorForErrorCode(TOSMBSessionErrorCode errorCode)
